@@ -1033,6 +1033,7 @@ function doRefresh(){
       fetchMarketHeadlines();
     }
     rAbout(selTk);fetchPN(selTk);
+    if(n>0){usingSnapshot=false;var sb=document.getElementById("snapshotBanner");if(sb)sb.style.display="none";}
     showSnapshotBanner();
     // Enrich quotes with 52w/mcap/PE (async — re-renders when done)
     if(n>0){
