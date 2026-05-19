@@ -72,10 +72,16 @@ function renderAll(){
     var rate=getFx(r.ccy);
     if(r.q&&r.q.regularMarketChange!=null)dp+=r.q.regularMarketChange*r.shares*rate;
   });
-  var tpl=tv-tc,tpp=tc?(tpl/tc)*100:0,dpc=tv?(dp/(tv-dp))*100:0;
+  // Add cash balance to total account value
+  var cash=0;
+  if(typeof BOLERO!=="undefined"&&BOLERO.summary&&BOLERO.summary.currentCashBalance){
+    cash=BOLERO.summary.currentCashBalance;
+  }
+  var tvWithCash=tv+cash;
+  var tpl=tvWithCash-tc,tpp=tc?(tpl/tc)*100:0,dpc=tv?(dp/(tv-dp))*100:0;
   var up=tpl>=0,du=dp>=0;
-  document.getElementById("sumValue").textContent="€"+fn(tv,0);
-  document.getElementById("sumCost").textContent="Cost basis €"+fn(tc,0);
+  document.getElementById("sumValue").textContent="\u20ac"+fn(tvWithCash,0);
+  document.getElementById("sumCost").textContent="Cost basis \u20ac"+fn(tc,0)+(cash>0?" \u00b7 Cash \u20ac"+fn(cash,0):"");
   var pe=document.getElementById("sumPL");pe.textContent=(up?"+":"")+"€"+fn(tpl,0);pe.className="sv "+(up?"g":"r");
   var pp=document.getElementById("sumPLpct");pp.textContent=fp(tpp);pp.className="ss "+(up?"g":"r");
   var de=document.getElementById("sumDayPL");de.textContent=(du?"+":"")+"€"+fn(dp,0);de.className="sv "+(du?"g":"r");
