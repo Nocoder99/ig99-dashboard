@@ -212,7 +212,7 @@ function renderPortfolioHoldings(rows,tv){
     tr.innerHTML='<td style="padding-left:12px"><div class="pn">'+r.name+'</div><div class="pm">'+r.ticker+' · '+r.shares.toLocaleString()+' sh</div></td>'
       +'<td class="mc">'+(r.price!=null?s+fn(r.price,r.price<10?3:2):"—")+'</td>'
       +'<td class="mc '+(d2?"g":"r")+'" style="font-size:11px">'+fp(r.dayChg)+'</td>'
-      +'<td class="mc" style="color:'+(is?'#a8a29e':'#78716c')+'">€'+fn(r.avgCostEUR,r.avgCostEUR<10?2:1)+'</td>'
+      +'<td class="mc hide-mob" style="color:'+(is?'#a8a29e':'#78716c')+'">€'+fn(r.avgCostEUR,r.avgCostEUR<10?2:1)+'</td>'
       +'<td class="mc" style="font-weight:500">'+valText+'</td>'
       +'<td style="padding-right:12px"><div class="mc '+(p2?"g":"r")+'" style="font-weight:500">'+retText+'</div><div class="rs">'+plText+'</div></td>';
     tb.appendChild(tr);

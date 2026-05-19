@@ -304,6 +304,9 @@ th:last-child{padding-right:8px}
 td:first-child{padding-left:8px}
 th:first-child{padding-left:8px}
 .cg{gap:16px}
+.hide-mob{display:none!important}
+.view-section section[style*="padding:24px"]{padding:12px!important}
+.sg{border-left:0;border-right:0}
 .pn{font-size:11px}
 .dn{font-size:1.2rem}
 .dp{font-size:1.2rem}
@@ -413,7 +416,7 @@ footer{padding-top:12px;flex-direction:column;gap:4px}
       <section>
         <div class="sh"><h2 class="st">Holdings</h2><span class="sm2">Sorted by value</span></div>
         <div class="tw"><table>
-          <thead><tr><th style="text-align:left;padding-left:12px">Position</th><th>Price</th><th>Day</th><th>Avg Cost</th><th>Value (&euro;)</th><th style="padding-right:12px">Return</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding-left:12px">Position</th><th>Price</th><th>Day</th><th class="hide-mob">Avg Cost</th><th>Value (&euro;)</th><th style="padding-right:12px">Return</th></tr></thead>
           <tbody id="holdingsBody"><tr><td colspan="6" class="lt" style="text-align:center;padding:24px">Loading portfolio data...</td></tr></tbody>
         </table></div>
       </section>
