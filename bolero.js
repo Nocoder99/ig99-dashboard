@@ -134,6 +134,31 @@ var BOLERO = {
     "Comtech": 107.39,
     "CFE": 90.16
   },
+
+  quarterlyValues: [
+    {date:"2020-12-31", value:10383, invested:11518},
+    {date:"2021-03-31", value:16772, invested:17649},
+    {date:"2021-06-30", value:21871, invested:23967},
+    {date:"2021-09-30", value:22015, invested:23967},
+    {date:"2021-12-31", value:27662, invested:25967},
+    {date:"2022-03-31", value:29288, invested:31603},
+    {date:"2022-06-30", value:22955, invested:31603},
+    {date:"2022-09-30", value:23333, invested:32596},
+    {date:"2022-12-31", value:26183, invested:33356},
+    {date:"2023-03-31", value:27329, invested:33356},
+    {date:"2023-06-30", value:25395, invested:35497},
+    {date:"2023-09-30", value:25845, invested:35497},
+    {date:"2023-12-31", value:30251, invested:37176},
+    {date:"2024-03-31", value:33272, invested:38456},
+    {date:"2024-06-30", value:41184, invested:41011},
+    {date:"2024-09-30", value:39728, invested:41369},
+    {date:"2024-12-31", value:33870, invested:41369},
+    {date:"2025-03-31", value:36136, invested:42319},
+    {date:"2025-06-30", value:43679, invested:44615},
+    {date:"2025-09-30", value:45321, invested:44615},
+    {date:"2025-12-31", value:40757, invested:44615},
+    {date:"2026-03-31", value:42216, invested:44615}
+  ],
   realizedPL: {
     "D'Ieteren": { bought: 3473.36, sold: 6801.88, pl: 3328.52 },
     "iShares Nasdaq 100": { bought: 2516.00, sold: 4394.90, pl: 1878.90 },

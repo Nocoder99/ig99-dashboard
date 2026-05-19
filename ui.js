@@ -106,11 +106,34 @@ function renderPortfolioValueChart(){
   var ctx=canvas.getContext("2d");
   if(pvChartInst)pvChartInst.destroy();
 
-  var hist=getPortfolioHistory();
-  var note=document.getElementById("pvChartNote");
+  // Merge Bolero quarterly history with daily snapshots
+  var labels=[],values=[],invested=[];
+  var hasBolero=typeof BOLERO!=="undefined"&&BOLERO.quarterlyValues&&BOLERO.quarterlyValues.length>0;
 
+  if(hasBolero){
+    BOLERO.quarterlyValues.forEach(function(q){
+      var d=new Date(q.date);
+      labels.push(d.toLocaleDateString("en-US",{month:"short",year:"2-digit"}));
+      values.push(q.value);
+      invested.push(q.invested);
+    });
+  }
+
+  // Append daily snapshots that are newer than the last quarterly date
+  var hist=getPortfolioHistory();
+  var lastQ=hasBolero?BOLERO.quarterlyValues[BOLERO.quarterlyValues.length-1].date:"";
+  var lastInvested=hasBolero?invested[invested.length-1]:0;
+  hist.forEach(function(h){
+    if(h.d>lastQ){
+      labels.push(new Date(h.d).toLocaleDateString("en-US",{month:"short",day:"numeric"}));
+      values.push(h.v);
+      invested.push(lastInvested);
+    }
+  });
+
+  var note=document.getElementById("pvChartNote");
   var placeholder=document.getElementById("pvPlaceholder");
-  if(hist.length<2){
+  if(values.length<2){
     pvChartInst=null;
     canvas.style.display="none";
     if(placeholder)placeholder.style.display="flex";
@@ -120,33 +143,23 @@ function renderPortfolioValueChart(){
   canvas.style.display="";
   if(placeholder)placeholder.style.display="none";
 
-  var labels=hist.map(function(h){
-    var d=new Date(h.d);
-    return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
-  });
-  var values=hist.map(function(h){return h.v});
-
   var startVal=values[0],endVal=values[values.length-1];
   var isUp=endVal>=startVal;
   var lc=isUp?"#047857":"#b91c1c";
-  var fc=isUp?"rgba(4,120,87,.12)":"rgba(185,28,28,.12)";
-
-  // Cost basis line (total invested)
-  var totalCost=0;
-  PORTFOLIO.forEach(function(p){totalCost+=p.shares*p.avgCostEUR});
+  var fc=isUp?"rgba(4,120,87,.08)":"rgba(185,28,28,.08)";
 
   var ds=[{
     label:"Portfolio Value",
     data:values,
     borderColor:lc,backgroundColor:fc,fill:true,
-    tension:.3,pointRadius:hist.length>30?0:3,pointHitRadius:8,borderWidth:2
+    tension:.3,pointRadius:values.length>30?0:4,pointHitRadius:8,borderWidth:2.5
   }];
-  if(totalCost>0){
+  if(invested.length>0&&invested[0]>0){
     ds.push({
       label:"Total Invested",
-      data:values.map(function(){return Math.round(totalCost)}),
-      borderColor:"#78716c",borderDash:[4,4],borderWidth:1,
-      pointRadius:0,pointHitRadius:0,fill:false
+      data:invested,
+      borderColor:"#78716c",borderDash:[5,5],borderWidth:1.5,
+      pointRadius:0,pointHitRadius:0,fill:false,tension:.3
     });
   }
 
@@ -157,7 +170,7 @@ function renderPortfolioValueChart(){
       responsive:true,maintainAspectRatio:false,
       interaction:{intersect:false,mode:"index"},
       plugins:{
-        legend:{display:false},
+        legend:{display:true,position:"bottom",labels:{font:{family:"Inter",size:10},boxWidth:16,padding:12}},
         tooltip:{
           backgroundColor:"#fafaf9",titleColor:"#1c1917",bodyColor:"#1c1917",
           borderColor:"#1c1917",borderWidth:1,
@@ -165,14 +178,24 @@ function renderPortfolioValueChart(){
           bodyFont:{family:"JetBrains Mono",size:11},
           callbacks:{
             label:function(c){
-              return c.datasetIndex===0?"Value: €"+fn(c.parsed.y,0):"Invested: €"+fn(c.parsed.y,0);
+              var prefix=c.datasetIndex===0?"Value: ":"Invested: ";
+              return prefix+"\u20ac"+c.parsed.y.toLocaleString();
+            },
+            afterBody:function(items){
+              if(items.length>=2){
+                var val=items[0].parsed.y,inv=items[1].parsed.y;
+                var gain=val-inv;
+                var pct=inv>0?((gain/inv)*100).toFixed(1):"0";
+                return (gain>=0?"+":"")+"\u20ac"+Math.abs(gain).toLocaleString()+" ("+pct+"%) "+(gain>=0?"gain":"loss");
+              }
+              return "";
             }
           }
         }
       },
       scales:{
-        x:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c",maxTicksLimit:10},grid:{display:false},border:{color:"#d6d3d1"}},
-        y:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c",callback:function(v){return"€"+fn(v,0)}},grid:{color:"#f5f5f4"},border:{display:false}}
+        x:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c",maxTicksLimit:12},grid:{display:false},border:{color:"#d6d3d1"}},
+        y:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c",callback:function(v){return"\u20ac"+(v/1000).toFixed(0)+"k"}},grid:{color:"#f5f5f4"},border:{display:false}}
       }
     }
   });
@@ -180,9 +203,11 @@ function renderPortfolioValueChart(){
   if(note){
     var chg=endVal-startVal;
     var chgPct=startVal>0?((endVal-startVal)/startVal)*100:0;
-    note.textContent="Tracking since "+hist[0].d+" · "+(chg>=0?"+":"")+"€"+fn(Math.abs(chg),0)+" ("+fp(chgPct)+") over "+hist.length+" data points";
+    var startDate=hasBolero?"Q4 2020":hist.length>0?hist[0].d:"";
+    note.textContent="Since "+startDate+" \u00b7 "+(chg>=0?"+":"")+"\u20ac"+fn(Math.abs(chg),0)+" ("+fp(chgPct)+") \u00b7 Portfolio value vs total capital invested";
   }
 }
+
 
 function initSumRangeButtons(){
   // No longer needed — summary has no per-stock chart
