@@ -1067,6 +1067,10 @@ function doRefresh(){
     if(n>0){
       var tv=0;
       computeRows().forEach(function(r){if(r.valueEUR!=null)tv+=r.valueEUR});
+      // Add cash balance so daily snapshots match quarterly values (which include cash)
+      if(typeof BOLERO!=="undefined"&&BOLERO.summary&&BOLERO.summary.currentCashBalance){
+        tv+=BOLERO.summary.currentCashBalance;
+      }
       if(tv>0)savePortfolioHistory(tv);
       if(currentTab==="summary")renderPortfolioValueChart();
     }
