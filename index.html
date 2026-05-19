@@ -101,6 +101,15 @@ tr.sel .r{color:#fca5a5}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid #d6d3d1;font-size:9px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .lt{font-size:12px;color:#a8a29e;font-style:italic}
 .sb{font-size:12px;color:#92400e;border:1px solid #fbbf24;background:#fefce8;padding:8px 12px;margin-bottom:24px}
+/* --- Club Financials --- */
+.fin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+.cf-flow-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f4;font-size:13px}
+.cf-flow-row:last-child{border-bottom:none}
+.cf-flow-label{color:#44403c}
+.cf-flow-val{font-family:'JetBrains Mono',monospace;font-weight:500}
+.cf-bar{height:14px;background:#f5f5f4;position:relative;overflow:hidden;min-width:60px}
+.cf-bar-fill{height:100%;position:absolute;left:0;top:0;transition:width .4s ease}
+@media(max-width:1024px){.fin-grid-2{grid-template-columns:1fr}}
 /* --- Tab Navigation --- */
 .tab-bar{display:flex;gap:0;border-bottom:1px solid #d6d3d1;margin-bottom:32px;justify-content:center}
 .tab-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;padding:10px 20px;border:none;background:none;color:#78716c;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
@@ -399,6 +408,7 @@ footer{padding-top:12px;flex-direction:column;gap:4px}
     <button class="tab-btn active" onclick="switchTab('summary')">Summary</button>
     <button class="tab-btn" onclick="switchTab('portfolio')">Portfolio Analyst</button>
     <button class="tab-btn" onclick="switchTab('market')">Market Analyst</button>
+    <button class="tab-btn" onclick="switchTab('financials')">Club Financials</button>
   </div>
 
   <!-- ===== VIEW 1: SUMMARY ===== -->
@@ -591,9 +601,82 @@ footer{padding-top:12px;flex-direction:column;gap:4px}
     </div>
   </section>
 
+
+  <!-- ===== VIEW 4: CLUB FINANCIALS ===== -->
+  <section id="view-financials" class="view-section">
+    <!-- Capital Overview Cards -->
+    <div class="sg" id="finCards">
+      <div class="sc"><div class="sl2">Net Capital In</div><div class="sv" id="finNetCapital">&mdash;</div><div class="ss">Deposits minus withdrawals</div></div>
+      <div class="sc"><div class="sl2">Total Dividends</div><div class="sv" id="finTotalDiv">&mdash;</div><div class="ss" id="finDivGrowth"></div></div>
+      <div class="sc"><div class="sl2">Withholding Tax</div><div class="sv" id="finTotalTax">&mdash;</div><div class="ss">Roerende voorheffing</div></div>
+      <div class="sc"><div class="sl2">Broker Fees</div><div class="sv" id="finTotalFees">&mdash;</div><div class="ss">Admin + transaction costs</div></div>
+    </div>
+
+    <!-- Dividends by Year Chart -->
+    <div class="fin-grid-2">
+      <div class="expo-card">
+        <div class="expo-title">Dividend Income by Year</div>
+        <div class="expo-sub">Growing passive income stream</div>
+        <div class="chart-box" style="height:280px"><canvas id="divYearChart"></canvas></div>
+      </div>
+      <div class="expo-card">
+        <div class="expo-title">Capital Contributions by Year</div>
+        <div class="expo-sub">Cash deposited into the club</div>
+        <div class="chart-box" style="height:280px"><canvas id="contribYearChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Dividends by Stock Table -->
+    <div style="margin-top:24px">
+      <div class="sh"><h2 class="st">Dividends by Stock</h2><span class="sm2">Lifetime totals</span></div>
+      <div class="tw"><table>
+        <thead><tr><th style="text-align:left;padding-left:12px">Stock</th><th>Total Received</th><th>% of Total</th><th style="padding-right:12px" class="hide-mob">Bar</th></tr></thead>
+        <tbody id="divStockBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Cost Basis / Total Invested by Stock -->
+    <div style="margin-top:32px">
+      <div class="sh"><h2 class="st">Total Invested by Stock</h2><span class="sm2">All-time purchase amounts</span></div>
+      <div class="tw"><table>
+        <thead><tr><th style="text-align:left;padding-left:12px">Stock</th><th>Bought</th><th>Sold</th><th style="padding-right:12px">Net Cost</th></tr></thead>
+        <tbody id="costBasisBody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Realized P/L Table -->
+    <div style="margin-top:32px">
+      <div class="sh"><h2 class="st">Realized Profit / Loss</h2><span class="sm2">Closed positions</span></div>
+      <div class="tw"><table>
+        <thead><tr><th style="text-align:left;padding-left:12px">Stock</th><th>Cost Basis</th><th>Proceeds</th><th style="padding-right:12px">P/L</th></tr></thead>
+        <tbody id="realizedPLBody"></tbody>
+      </table></div>
+      <div id="realizedPLSummary" style="margin-top:8px;font-size:12px;color:#78716c;text-align:right;padding-right:12px"></div>
+    </div>
+
+    <!-- Withholding Tax by Year -->
+    <div style="margin-top:32px" class="fin-grid-2">
+      <div class="expo-card">
+        <div class="expo-title">Withholding Tax by Year</div>
+        <div class="expo-sub">Roerende voorheffing on dividends</div>
+        <div class="chart-box" style="height:240px"><canvas id="taxYearChart"></canvas></div>
+      </div>
+      <div class="expo-card">
+        <div class="expo-title">Cash Flow Summary</div>
+        <div class="expo-sub">All-time money movements</div>
+        <div id="cashFlowSummary"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;font-size:10px;color:#a8a29e;text-align:center">
+      Data source: Bolero broker export &middot; Last updated: <span id="finLastUpdated"></span> &middot; Upload a new export to refresh
+    </div>
+  </section>
+
   <footer><span>Data: Yahoo Finance &middot; FX converted to EUR &middot; Refresh every 60s</span><span>Quotes may be 15min delayed</span></footer>
 </main>
 <script src="snapshot.js"></script>
+<script src="bolero.js"></script>
 <script src="dashboard.js"></script>
 <script src="ui.js"></script>
 </body>

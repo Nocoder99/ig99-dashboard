@@ -17,7 +17,7 @@ function switchTab(tabName){
   currentTab=tabName;
   var tabs=document.querySelectorAll(".tab-btn");
   tabs.forEach(function(t){t.classList.remove("active")});
-  var map={"summary":0,"portfolio":1,"market":2};
+  var map={"summary":0,"portfolio":1,"market":2,"financials":3};
   if(tabs[map[tabName]])tabs[map[tabName]].classList.add("active");
 
   document.querySelectorAll(".view-section").forEach(function(s){s.classList.remove("active")});
@@ -35,6 +35,8 @@ function switchTab(tabName){
   } else if(tabName==="market"){
     renderMarketView();
     fetchMarketHeadlines();
+  } else if(tabName==="financials"){
+    renderFinancialsView();
   }
 }
 
@@ -1058,3 +1060,251 @@ initRangeButtons();
 initSumRangeButtons();
 doRefresh();
 setInterval(doRefresh,60000);
+
+
+// =====================================================
+// CLUB FINANCIALS VIEW
+// =====================================================
+
+var finDivYearChart=null, finContribYearChart=null, finTaxYearChart=null;
+
+function renderFinancialsView(){
+  if(typeof BOLERO==="undefined") return;
+  var B=BOLERO;
+
+  // --- Capital Overview Cards ---
+  var el;
+  el=document.getElementById("finNetCapital"); if(el) el.textContent="\u20ac"+fn(B.summary.netCashIn,0);
+  el=document.getElementById("finTotalDiv"); if(el) el.textContent="\u20ac"+fn(B.summary.totalDividends,2);
+  el=document.getElementById("finDivGrowth"); if(el){
+    var years=Object.keys(B.dividendsByYear);
+    if(years.length>=2){
+      var last=B.dividendsByYear[years[years.length-2]];
+      var prev=B.dividendsByYear[years[years.length-3]]||0;
+      if(prev>0){
+        var growth=((last-prev)/prev*100);
+        el.textContent=(growth>=0?"+":"")+growth.toFixed(0)+"% vs prior year";
+      } else { el.textContent="Growing year over year"; }
+    }
+  }
+  el=document.getElementById("finTotalTax"); if(el) el.textContent="\u20ac"+fn(B.summary.totalWithholdingTax,2);
+  el=document.getElementById("finTotalFees"); if(el) el.textContent="\u20ac"+fn(B.summary.totalFees,0);
+  el=document.getElementById("finLastUpdated"); if(el) el.textContent=B.lastUpdated;
+
+  // --- Dividends by Year Chart ---
+  renderFinDivYearChart();
+  renderFinContribYearChart();
+  renderFinTaxYearChart();
+  renderDivStockTable();
+  renderCostBasisTable();
+  renderRealizedPLTable();
+  renderCashFlowSummary();
+}
+
+function renderFinDivYearChart(){
+  if(typeof BOLERO==="undefined") return;
+  var cvs=document.getElementById("divYearChart"); if(!cvs) return;
+  if(finDivYearChart){finDivYearChart.destroy();finDivYearChart=null}
+  var years=Object.keys(BOLERO.dividendsByYear);
+  var vals=years.map(function(y){return BOLERO.dividendsByYear[y]});
+  var ctx=cvs.getContext("2d");
+  finDivYearChart=new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:years,
+      datasets:[{
+        label:"Dividends (\u20ac)",
+        data:vals,
+        backgroundColor:"#047857",
+        borderColor:"#065f46",
+        borderWidth:1,
+        borderRadius:2
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return "\u20ac"+c.raw.toFixed(2)}}}},
+      scales:{
+        y:{beginAtZero:true,ticks:{callback:function(v){return "\u20ac"+v}},grid:{color:"#f5f5f4"}},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+function renderFinContribYearChart(){
+  if(typeof BOLERO==="undefined") return;
+  var cvs=document.getElementById("contribYearChart"); if(!cvs) return;
+  if(finContribYearChart){finContribYearChart.destroy();finContribYearChart=null}
+  var years=Object.keys(BOLERO.contributionsByYear);
+  var vals=years.map(function(y){return BOLERO.contributionsByYear[y]});
+  var ctx=cvs.getContext("2d");
+  // Cumulative line on secondary axis
+  var cumulative=[];var cum=0;
+  vals.forEach(function(v){cum+=v;cumulative.push(Math.round(cum))});
+  finContribYearChart=new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:years,
+      datasets:[
+        {
+          label:"Annual Contribution (\u20ac)",
+          data:vals,
+          backgroundColor:"#1c1917",
+          borderColor:"#1c1917",
+          borderWidth:1,
+          borderRadius:2,
+          yAxisID:"y"
+        },
+        {
+          label:"Cumulative (\u20ac)",
+          data:cumulative,
+          type:"line",
+          borderColor:"#6366f1",
+          backgroundColor:"transparent",
+          borderWidth:2,
+          pointRadius:3,
+          pointBackgroundColor:"#6366f1",
+          yAxisID:"y1",
+          tension:0.3
+        }
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:"bottom",labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:function(c){return c.dataset.label+": \u20ac"+c.raw.toLocaleString()}}}},
+      scales:{
+        y:{beginAtZero:true,ticks:{callback:function(v){return "\u20ac"+v.toLocaleString()},font:{size:10}},grid:{color:"#f5f5f4"}},
+        y1:{position:"right",beginAtZero:true,ticks:{callback:function(v){return "\u20ac"+(v/1000).toFixed(0)+"k"},font:{size:10}},grid:{display:false}},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+function renderFinTaxYearChart(){
+  if(typeof BOLERO==="undefined") return;
+  var cvs=document.getElementById("taxYearChart"); if(!cvs) return;
+  if(finTaxYearChart){finTaxYearChart.destroy();finTaxYearChart=null}
+  var years=Object.keys(BOLERO.taxByYear);
+  var vals=years.map(function(y){return BOLERO.taxByYear[y]});
+  var ctx=cvs.getContext("2d");
+  finTaxYearChart=new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:years,
+      datasets:[{
+        label:"Withholding Tax (\u20ac)",
+        data:vals,
+        backgroundColor:"#b91c1c",
+        borderColor:"#991b1b",
+        borderWidth:1,
+        borderRadius:2
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return "\u20ac"+c.raw.toFixed(2)}}}},
+      scales:{
+        y:{beginAtZero:true,ticks:{callback:function(v){return "\u20ac"+v},font:{size:10}},grid:{color:"#f5f5f4"}},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+function renderDivStockTable(){
+  if(typeof BOLERO==="undefined") return;
+  var tb=document.getElementById("divStockBody"); if(!tb) return;
+  var stocks=Object.keys(BOLERO.dividendsByStock);
+  var total=BOLERO.summary.totalDividends;
+  var maxVal=BOLERO.dividendsByStock[stocks[0]]||1;
+  var html="";
+  stocks.forEach(function(s){
+    var amt=BOLERO.dividendsByStock[s];
+    var pct=(amt/total*100);
+    var barW=(amt/maxVal*100);
+    html+='<tr><td style="text-align:left;padding-left:12px;font-weight:500">'+s+'</td>'
+      +'<td class="mc">\u20ac'+amt.toFixed(2)+'</td>'
+      +'<td class="mc">'+pct.toFixed(1)+'%</td>'
+      +'<td class="hide-mob" style="min-width:80px"><div class="cf-bar"><div class="cf-bar-fill" style="width:'+barW.toFixed(1)+'%;background:#047857"></div></div></td>'
+      +'</tr>';
+  });
+  tb.innerHTML=html;
+}
+
+function renderCostBasisTable(){
+  if(typeof BOLERO==="undefined") return;
+  var tb=document.getElementById("costBasisBody"); if(!tb) return;
+  var buys=BOLERO.buysByStock;
+  var sells=BOLERO.sellsByStock;
+  var allStocks=Object.keys(buys);
+  var html="";
+  allStocks.forEach(function(s){
+    var b=buys[s]||0;
+    var sl=sells[s]||0;
+    var net=b-sl;
+    html+='<tr><td style="text-align:left;padding-left:12px;font-weight:500">'+s+'</td>'
+      +'<td class="mc">\u20ac'+fn(b,0)+'</td>'
+      +'<td class="mc">'+(sl>0?'\u20ac'+fn(sl,0):'—')+'</td>'
+      +'<td class="mc" style="font-weight:600;color:'+(net>0?'#1c1917':'#047857')+'">\u20ac'+fn(Math.abs(net),0)+(net<=0?' (closed)':'')+'</td>'
+      +'</tr>';
+  });
+  tb.innerHTML=html;
+}
+
+function renderRealizedPLTable(){
+  if(typeof BOLERO==="undefined") return;
+  var tb=document.getElementById("realizedPLBody"); if(!tb) return;
+  var rpl=BOLERO.realizedPL;
+  var stocks=Object.keys(rpl);
+  var totalPL=0;
+  var wins=0,losses=0;
+  var html="";
+  stocks.forEach(function(s){
+    var d=rpl[s];
+    totalPL+=d.pl;
+    if(d.pl>=0) wins++; else losses++;
+    var plColor=d.pl>=0?"#047857":"#b91c1c";
+    var plSign=d.pl>=0?"+":"";
+    html+='<tr><td style="text-align:left;padding-left:12px;font-weight:500">'+s+'</td>'
+      +'<td class="mc">\u20ac'+fn(d.bought,0)+'</td>'
+      +'<td class="mc">\u20ac'+fn(d.sold,0)+'</td>'
+      +'<td class="mc" style="font-weight:600;color:'+plColor+'">'+plSign+'\u20ac'+fn(Math.abs(d.pl),0)+'</td>'
+      +'</tr>';
+  });
+  tb.innerHTML=html;
+  var sumEl=document.getElementById("realizedPLSummary");
+  if(sumEl){
+    var plColor=totalPL>=0?"#047857":"#b91c1c";
+    sumEl.innerHTML='<span style="font-weight:600;color:'+plColor+'">'+(totalPL>=0?"+":"")+'\u20ac'+fn(Math.abs(totalPL),0)+' total realized P/L</span>'
+      +' &middot; '+wins+' winners, '+losses+' losers out of '+(wins+losses)+' closed positions';
+  }
+}
+
+function renderCashFlowSummary(){
+  if(typeof BOLERO==="undefined") return;
+  var el=document.getElementById("cashFlowSummary"); if(!el) return;
+  var B=BOLERO.summary;
+  var items=[
+    {label:"Total Deposited", val:B.totalDeposited, color:"#047857", sign:"+"},
+    {label:"Total Withdrawn", val:Math.abs(B.totalWithdrawn), color:"#b91c1c", sign:"-"},
+    {label:"Total Bought (stocks)", val:B.totalBought, color:"#1c1917", sign:""},
+    {label:"Total Sold (stocks)", val:B.totalSold, color:"#047857", sign:"+"},
+    {label:"Total Dividends", val:B.totalDividends, color:"#047857", sign:"+"},
+    {label:"Withholding Tax", val:B.totalWithholdingTax, color:"#b91c1c", sign:"-"},
+    {label:"Broker Fees", val:B.totalFees, color:"#b91c1c", sign:"-"},
+    {label:"Corp Actions (net)", val:B.totalCorpActions, color:"#78716c", sign:"+"}
+  ];
+  var html="";
+  items.forEach(function(it){
+    html+='<div class="cf-flow-row"><span class="cf-flow-label">'+it.label+'</span>'
+      +'<span class="cf-flow-val" style="color:'+it.color+'">'+it.sign+'\u20ac'+fn(it.val,0)+'</span></div>';
+  });
+  // Add estimated cash balance
+  var estCash=B.totalDeposited+B.totalWithdrawn-B.totalBought+B.totalSold+B.totalDividends-B.totalWithholdingTax-B.totalFees+B.totalCorpActions;
+  html+='<div class="cf-flow-row" style="border-top:2px solid #1c1917;margin-top:8px;padding-top:12px;font-weight:600">'
+    +'<span class="cf-flow-label">Estimated Cash Balance</span>'
+    +'<span class="cf-flow-val" style="color:#1c1917">\u20ac'+fn(estCash,0)+'</span></div>';
+  el.innerHTML=html;
+}
