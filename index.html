@@ -106,6 +106,12 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid #d6d3d1;font-size:9
 .tab-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;padding:10px 20px;border:none;background:none;color:#78716c;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
 .tab-btn:hover{color:#1c1917}
 .tab-btn.active{color:#1c1917;border-bottom-color:#1c1917}
+@media(max-width:640px){
+.tab-bar{background:#e7e5e4;border-radius:999px;border-bottom:none;padding:3px;gap:2px;margin-bottom:20px;justify-content:center}
+.tab-btn{border-bottom:none;border-radius:999px;padding:7px 12px;font-size:10px;letter-spacing:.05em;transition:all .15s}
+.tab-btn.active{background:#1c1917;color:#fafaf9;border-bottom-color:transparent}
+.tab-btn:hover{color:#1c1917}
+}
 .view-section{display:none}
 .view-section.active{display:block}
 /* --- Market Analyst --- */
@@ -283,9 +289,12 @@ main{padding:16px 12px}
 .br{padding:5px 10px;font-size:10px}
 .sv{font-size:1.4rem}
 .sc{padding:12px 10px}
-.tab-bar{gap:0;overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}
-.tab-btn{padding:8px 14px;font-size:11px;white-space:nowrap;flex-shrink:0}
 table{font-size:11px}
+.ai-rationale{font-size:10px;word-break:break-word}
+.ai-pos-table td:last-child{max-width:100px;word-break:break-word;font-size:10px}
+.ai-pos-table{font-size:10px}
+.ai-pos-table th{font-size:8px;padding:4px 3px}
+.ai-pos-table td{padding:6px 3px}
 th{padding:6px 4px;font-size:9px}
 td{padding:8px 4px}
 .tw{-webkit-overflow-scrolling:touch}

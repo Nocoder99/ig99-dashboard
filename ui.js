@@ -993,6 +993,7 @@ function selectPosition(tk){
   renderAll();
   fetchChart(tk,curRange);
   rAbout(tk);fetchPN(tk);
+  if(window.innerWidth<=640){var det=document.getElementById("detName");if(det)setTimeout(function(){det.scrollIntoView({behavior:"smooth",block:"start"})},100);}
 }
 
 // --- Main refresh ---
