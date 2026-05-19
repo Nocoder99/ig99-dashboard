@@ -14,7 +14,8 @@ var BOLERO = {
     totalDividends: 1957.92,
     totalWithholdingTax: 1037.75,
     totalFees: 850.00,
-    totalCorpActions: 421.01
+    totalCorpActions: 421.01,
+    currentCashBalance: 6435.91
   },
   dividendsByYear: {
     "2020": 9.48,
