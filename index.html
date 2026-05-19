@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IG99 Portfolio Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f5f5f4;color:#1c1917}
+body.locked header,body.locked main{display:none!important}
+#loginGate{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f4}
+.login-card{background:#fff;border:1px solid #1c1917;padding:48px 40px;max-width:380px;width:100%;text-align:center}
+.login-card h1{font-family:'Fraunces',Georgia,serif;font-size:1.875rem;font-weight:500;margin-bottom:6px}
+.login-card .sub{font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;margin-bottom:32px}
+.login-card input{width:100%;padding:10px 12px;border:1px solid #d6d3d1;font-family:'Inter',sans-serif;font-size:14px;text-align:center;outline:none;transition:border .15s}
+.login-card input:focus{border-color:#1c1917}
+.login-card button{width:100%;margin-top:12px;padding:10px;border:1px solid #1c1917;background:#1c1917;color:#fafaf9;font-family:'Inter',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:opacity .15s}
+.login-card button:hover{opacity:.85}
+.login-card .err{font-size:12px;color:#b91c1c;margin-top:10px;min-height:18px}
+header{position:sticky;top:0;z-index:30;background:rgba(245,245,244,.95);backdrop-filter:blur(8px);border-bottom:1px solid #d6d3d1}
+.hi{max-width:1400px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.hl{display:flex;align-items:baseline;gap:16px}
+.hl h1{font-family:'Fraunces',Georgia,serif;font-size:1.875rem;font-weight:500}
+.hm{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#78716c}
+.hr{display:flex;align-items:center;gap:16px}
+.sd{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sd.live{background:#10b981;animation:pd 1.6s ease-in-out infinite}
+.sd.off{background:#ef4444}
+@keyframes pd{0%,100%{opacity:1}50%{opacity:.3}}
+.sl{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#57534e}
+.lu{font-family:'JetBrains Mono',monospace;font-size:11px;color:#78716c}
+.br{font-size:11px;text-transform:uppercase;letter-spacing:.1em;padding:6px 12px;border:1px solid #1c1917;background:0 0;color:#1c1917;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.br:hover{background:#1c1917;color:#fafaf9}
+main{max-width:1400px;margin:0 auto;padding:32px 24px}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d6d3d1;border:1px solid #1c1917;margin-bottom:32px}
+.sc{background:#fff;padding:20px}
+.sl2{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;margin-bottom:8px}
+.sv{font-family:'Fraunces',Georgia,serif;font-size:1.875rem;font-weight:500}
+.ss{font-size:11px;color:#78716c;margin-top:4px}
+.g{color:#047857}.r{color:#b91c1c}
+.eb{font-size:12px;color:#b91c1c;border:1px solid #fca5a5;background:#fef2f2;padding:8px 12px;margin-bottom:24px}
+.ib{font-size:12px;color:#1e40af;border:1px solid #93c5fd;background:#eff6ff;padding:8px 12px;margin-bottom:24px}
+.cg{display:grid;grid-template-columns:7fr 5fr;gap:24px}
+.sh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #d6d3d1;padding-bottom:8px;margin-bottom:12px}
+.st{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500}
+.sm2{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#78716c}
+.tw{background:#fff;border:1px solid #1c1917;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:#1c1917;color:#fafaf9}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:500;padding:8px;text-align:right}
+th:first-child{text-align:left}
+td{padding:10px 8px;text-align:right;border-bottom:1px solid #e7e5e4}
+td:first-child{text-align:left}
+tbody tr{cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#f5f5f4}
+tbody tr.sel{background:#1c1917;color:#fafaf9}
+tbody tr.sel:hover{background:#1c1917}
+tbody tr:last-child td{border-bottom:none}
+.pn{font-weight:600;font-size:13px;line-height:1.3}
+.pm{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c}
+tr.sel .pm{color:#a8a29e}
+.mc{font-family:'JetBrains Mono',monospace;font-size:12px}
+.rs{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c}
+tr.sel .rs{color:#a8a29e}
+tr.sel .g{color:#6ee7b7}
+tr.sel .r{color:#fca5a5}
+.dh{border-bottom:1px solid #d6d3d1;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px}
+.dn{font-family:'Fraunces',Georgia,serif;font-size:1.5rem;font-weight:500;line-height:1.2}
+.dt{font-family:'JetBrains Mono',monospace;font-size:11px;color:#78716c;margin-top:2px}
+.dp{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:500;text-align:right}
+.dc{font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right}
+.ic{background:#fff;border:1px solid #1c1917;padding:16px;margin-bottom:16px}
+.ig{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center}
+.il{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#78716c;margin-bottom:4px}
+.iv{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500}
+.is{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c}
+.id{border-left:1px solid #e7e5e4;border-right:1px solid #e7e5e4}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cl{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#57534e}
+.rb{display:flex;gap:4px}
+.rn{font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border:1px solid #d6d3d1;background:0 0;cursor:pointer;transition:all .15s}
+.rn:hover{border-color:#1c1917}
+.rn.act{border-color:#1c1917;background:#1c1917;color:#fafaf9}
+.cn{font-family:'JetBrains Mono',monospace;font-size:9px;color:#78716c;margin-top:4px}
+.chart-box{position:relative;width:100%;height:220px}
+.sg2{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d6d3d1;border:1px solid #1c1917;margin-bottom:16px}
+.s2c{background:#fff;padding:10px}
+.s2l{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#78716c}
+.s2v{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;margin-top:2px}
+.at{font-size:12px;line-height:1.6;color:#44403c}
+.am{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#78716c}
+.am strong{color:#1c1917;font-weight:500}
+.ni{border-bottom:1px solid #e7e5e4;padding-bottom:12px;margin-bottom:12px}
+.ni:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.ni a{text-decoration:none;color:inherit;display:block}
+.ni a:hover .nt{color:#57534e}
+.nt{font-size:13px;font-weight:500;line-height:1.4}
+.nm{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;margin-top:4px}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid #d6d3d1;font-size:9px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.lt{font-size:12px;color:#a8a29e;font-style:italic}
+.sb{font-size:12px;color:#92400e;border:1px solid #fbbf24;background:#fefce8;padding:8px 12px;margin-bottom:24px}
+/* --- Tab Navigation --- */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid #d6d3d1;margin-bottom:32px;justify-content:center}
+.tab-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;padding:10px 20px;border:none;background:none;color:#78716c;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab-btn:hover{color:#1c1917}
+.tab-btn.active{color:#1c1917;border-bottom-color:#1c1917}
+.view-section{display:none}
+.view-section.active{display:block}
+/* --- Market Analyst --- */
+.mkt-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#d6d3d1;border:1px solid #1c1917;margin-bottom:32px}
+.mkt-card{background:#fff;padding:20px}
+.mkt-card-label{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;margin-bottom:8px}
+.mkt-card-val{font-family:'Fraunces',Georgia,serif;font-size:1.875rem;font-weight:500}
+.mkt-card-sub{font-size:11px;color:#78716c;margin-top:4px}
+.mkt-table-wrap{background:#fff;border:1px solid #1c1917;overflow-x:auto;margin-bottom:32px}
+.mkt-section-title{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500;margin-bottom:4px}
+.mkt-section-sub{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;margin-bottom:16px}
+.mkt-panel{background:#fff;border:1px solid #1c1917;padding:20px;margin-bottom:32px}
+.mkt-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+.mkt-headline-item{border-bottom:1px solid #e7e5e4;padding:10px 0}
+.mkt-headline-item:last-child{border-bottom:none}
+.mkt-headline-item a{text-decoration:none;color:inherit;display:block}
+.mkt-headline-item a:hover .mkt-headline-title{color:#57534e}
+.mkt-headline-title{font-size:13px;font-weight:500;line-height:1.4}
+.mkt-headline-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;margin-top:4px}
+.mkt-rates-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#e7e5e4;border:1px solid #e7e5e4}
+.mkt-rate-cell{background:#fff;padding:12px;text-align:center}
+.mkt-rate-bank{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#78716c;margin-bottom:4px;font-weight:500}
+.mkt-rate-val{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500}
+.mkt-rate-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;margin-top:2px}
+.mkt-insight-card{background:#fff;border:1px solid #1c1917;padding:20px;margin-bottom:32px}
+.mkt-insight-item{font-size:12px;line-height:1.6;color:#44403c;padding:8px 0;border-bottom:1px solid #f5f5f4}
+.mkt-insight-item:last-child{border-bottom:none}
+.mkt-insight-icon{margin-right:6px}
+@media(max-width:1024px){.mkt-cards{grid-template-columns:repeat(2,1fr)}.mkt-grid-2{grid-template-columns:1fr}.mkt-rates-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.mkt-cards{grid-template-columns:1fr}.mkt-rates-grid{grid-template-columns:1fr}}
+.exposure-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
+.expo-card{background:#fff;border:1px solid #1c1917;padding:20px}
+.expo-title{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500;margin-bottom:4px}
+.expo-sub{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;margin-bottom:16px}
+.expo-body{display:flex;align-items:center;gap:24px}
+.expo-chart-wrap{flex-shrink:0;position:relative;width:180px;height:180px}
+.expo-legend{flex:1;display:flex;flex-direction:column;gap:6px}
+.expo-legend-item{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.expo-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-right:8px}
+.expo-label{display:flex;align-items:center;flex:1}
+.expo-pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;text-align:right;min-width:40px}
+.expo-val{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;margin-left:8px;min-width:44px;text-align:right}
+.sector-bar-wrap{display:flex;flex-direction:column;gap:8px}
+.sector-bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.sector-bar-label{width:100px;text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sector-bar-track{flex:1;height:18px;background:#f5f5f4;position:relative;overflow:hidden}
+.sector-bar-fill{height:100%;position:absolute;left:0;top:0;transition:width .4s ease}
+.sector-bar-pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;min-width:44px;text-align:right}
+.exposure-row-3{display:grid;grid-template-columns:5fr 7fr;gap:24px;margin-top:24px}
+.weight-bar-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0}
+.weight-bar-row:not(:last-child){border-bottom:1px solid #f5f5f4}
+.weight-bar-name{width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.weight-bar-ticker{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;width:70px;flex-shrink:0}
+.weight-bar-track{flex:1;height:14px;background:#f5f5f4;position:relative;overflow:hidden}
+.weight-bar-fill{height:100%;position:absolute;left:0;top:0;transition:width .4s ease}
+.weight-bar-pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;min-width:40px;text-align:right}
+.weight-bar-val{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;min-width:50px;text-align:right}
+.asset-alloc-body{display:flex;align-items:center;gap:32px}
+.asset-alloc-chart{flex-shrink:0;position:relative;width:200px;height:200px}
+.asset-alloc-total{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.asset-alloc-total-val{font-family:'Fraunces',Georgia,serif;font-size:1.3rem;font-weight:500}
+.asset-alloc-total-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#78716c}
+.asset-alloc-legend{flex:1;display:flex;flex-direction:column;gap:10px}
+.asset-alloc-item{display:flex;align-items:center;gap:12px}
+.asset-alloc-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.asset-alloc-info{flex:1}
+.asset-alloc-name{font-size:13px;font-weight:500}
+.asset-alloc-row2{display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#78716c;margin-top:2px}
+.asset-alloc-pct{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;min-width:50px;text-align:right}
+/* --- JPM Market Context Section --- */
+.jpm-section{margin-top:32px;border:1px solid #1c1917;background:#fff}
+.jpm-header{background:#1c1917;color:#fafaf9;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.jpm-header-left{display:flex;align-items:center;gap:10px}
+.jpm-icon{width:28px;height:28px;background:#0369a1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace}
+.jpm-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500;margin:0}
+.jpm-header-tag{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#a8a29e}
+.jpm-body{padding:20px}
+.jpm-source{font-size:10px;color:#78716c;background:#f5f5f4;border-left:3px solid #0369a1;padding:8px 12px;margin-bottom:20px;line-height:1.5}
+.jpm-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.jpm-card{border:1px solid #e7e5e4;padding:16px}
+.jpm-card-title{font-family:'Fraunces',Georgia,serif;font-size:1rem;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.jpm-card-icon{font-size:14px}
+.jpm-val-table{width:100%;border-collapse:collapse;font-size:12px}
+.jpm-val-table thead{background:#f5f5f4;color:#78716c}
+.jpm-val-table th{font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:500;color:#78716c;padding:6px 6px 8px;text-align:right;border-bottom:1px solid #e7e5e4}
+.jpm-val-table th:first-child{text-align:left}
+.jpm-val-table td{padding:8px 6px;border-bottom:1px solid #f5f5f4;vertical-align:middle}
+.jpm-val-table tr:last-child td{border-bottom:none}
+.jpm-val-region{font-weight:600;text-align:left;white-space:nowrap}
+.jpm-val-num{font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right;font-weight:500}
+.jpm-val-avg{font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;color:#78716c}
+.jpm-val-bar-cell{width:100%;min-width:60px}
+.jpm-val-bar-track{height:16px;background:#f5f5f4;position:relative;border-radius:2px;overflow:hidden}
+.jpm-val-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+.jpm-val-bar-avg-line{position:absolute;top:0;bottom:0;width:2px;background:#1c1917;border-radius:1px;z-index:2}
+.jpm-val-diff{font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;font-weight:600;white-space:nowrap}
+.jpm-val-diff.over{color:#b91c1c}
+.jpm-val-diff.under{color:#047857}
+.jpm-val-diff.neutral{color:#57534e}
+.jpm-ret-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f5f5f4;font-size:12px}
+.jpm-ret-row:last-child{border-bottom:none}
+.jpm-ret-label{width:130px;flex-shrink:0;font-weight:500}
+.jpm-ret-bar-wrap{flex:1;height:20px;background:#f5f5f4;position:relative;overflow:hidden}
+.jpm-ret-bar{height:100%;position:absolute;left:0;top:0;transition:width .4s ease}
+.jpm-ret-val{font-family:'JetBrains Mono',monospace;font-size:11px;min-width:40px;text-align:right;font-weight:500}
+.jpm-port-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:2px;margin-left:6px;font-weight:500}
+.jpm-port-tag.high{background:#f0fdf4;color:#166534;border:1px solid #86efac}
+.jpm-port-tag.med{background:#eff6ff;color:#1e40af;border:1px solid #93c5fd}
+.jpm-port-tag.low{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}
+.jpm-port-tag.none{background:#f5f5f4;color:#57534e;border:1px solid #d6d3d1}
+.jpm-insight{font-size:12px;line-height:1.6;color:#44403c;margin-bottom:8px;padding:6px 0;border-bottom:1px solid #f5f5f4}
+.jpm-insight:last-child{border-bottom:none;margin-bottom:0}
+.jpm-us-detail{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e7e5e4;border:1px solid #e7e5e4;margin-top:12px}
+.jpm-us-cell{background:#fff;padding:10px;text-align:center}
+.jpm-us-cell-label{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:#78716c;margin-bottom:4px}
+.jpm-us-cell-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+.jpm-us-cell-avg{font-family:'JetBrains Mono',monospace;font-size:10px;color:#78716c;margin-top:2px}
+.jpm-us-cell-val.expensive{color:#b91c1c}
+.jpm-us-cell-val.fair{color:#047857}
+.jpm-us-cell-val.cheap{color:#1e40af}
+@media(max-width:1024px){.jpm-grid{grid-template-columns:1fr}}
+/* --- AI Analysis Section --- */
+.ai-section{margin-top:32px;border:1px solid #1c1917;background:#fff}
+.ai-header{background:#1c1917;color:#fafaf9;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.ai-header-left{display:flex;align-items:center;gap:10px}
+.ai-icon{width:28px;height:28px;background:#6366f1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.ai-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.25rem;font-weight:500;margin:0}
+.ai-header-tag{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#a8a29e}
+.ai-body{padding:20px}
+.ai-disclaimer{font-size:10px;color:#78716c;background:#f5f5f4;border-left:3px solid #d6d3d1;padding:8px 12px;margin-bottom:20px;line-height:1.5}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.ai-card{border:1px solid #e7e5e4;padding:16px}
+.ai-card-title{font-family:'Fraunces',Georgia,serif;font-size:1rem;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.ai-card-icon{font-size:14px}
+.ai-insight{font-size:12px;line-height:1.6;color:#44403c;margin-bottom:8px;padding:6px 0;border-bottom:1px solid #f5f5f4}
+.ai-insight:last-child{border-bottom:none;margin-bottom:0}
+.ai-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:2px 6px;border-radius:2px;margin-right:6px;font-weight:500}
+.ai-tag.over{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}
+.ai-tag.under{background:#eff6ff;color:#1e40af;border:1px solid #93c5fd}
+.ai-tag.ok{background:#f0fdf4;color:#166534;border:1px solid #86efac}
+.ai-tag.warn{background:#fefce8;color:#92400e;border:1px solid #fde047}
+.ai-tag.info{background:#f5f5f4;color:#57534e;border:1px solid #d6d3d1}
+.ai-positions{margin-top:0}
+.ai-pos-table{width:100%;border-collapse:collapse;font-size:12px}
+.ai-pos-table thead{background:#f5f5f4}
+.ai-pos-table th{font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:500;color:#78716c;padding:6px 8px;text-align:left}
+.ai-pos-table th:nth-child(n+3){text-align:right}
+.ai-pos-table td{padding:8px;border-bottom:1px solid #f5f5f4;vertical-align:top}
+.ai-pos-table td:nth-child(n+3){text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px}
+.ai-signal{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:2px 8px;border-radius:2px;display:inline-block}
+.ai-signal.buy{background:#f0fdf4;color:#166534}
+.ai-signal.hold{background:#f5f5f4;color:#57534e}
+.ai-signal.trim{background:#fefce8;color:#92400e}
+.ai-signal.review{background:#fef2f2;color:#b91c1c}
+.ai-rationale{font-size:11px;color:#78716c;margin-top:2px;line-height:1.4}
+.ai-score-row{display:flex;gap:20px;margin-bottom:20px}
+.ai-score-card{flex:1;text-align:center;padding:16px;border:1px solid #e7e5e4}
+.ai-score-val{font-family:'Fraunces',Georgia,serif;font-size:2rem;font-weight:500}
+.ai-score-label{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#78716c;margin-top:4px}
+.ai-score-bar{height:6px;background:#e7e5e4;margin-top:8px;border-radius:3px;overflow:hidden}
+.ai-score-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.loading-dots::after{content:'';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+.chart-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:#a8a29e}
+.loading-bar{width:120px;height:4px;background:#e7e5e4;border-radius:2px;overflow:hidden}
+.loading-bar-fill{width:30%;height:100%;background:#6366f1;border-radius:2px;animation:lbar .8s ease-in-out infinite alternate}
+@keyframes lbar{0%{margin-left:0}100%{margin-left:70%}}
+.news-loading{font-size:12px;color:#a8a29e;padding:16px 0;text-align:center}
+@media(max-width:1024px){.cg{grid-template-columns:1fr}.sg,.sg2{grid-template-columns:repeat(2,1fr)}.exposure-row,.exposure-row-3{grid-template-columns:1fr}.ai-grid{grid-template-columns:1fr}.ai-score-row{flex-wrap:wrap}}
+@media(max-width:640px){.sg{grid-template-columns:1fr}.hi{flex-direction:column;align-items:flex-start}.expo-body,.asset-alloc-body{flex-direction:column}}
+</style>
+</head>
+<body class="locked">
+<div id="loginGate">
+  <div class="login-card">
+    <h1>IG99 Portfolio</h1>
+    <div class="sub">Investment Club Dashboard</div>
+    <form id="loginForm" onsubmit="return checkLogin(event)">
+      <input type="password" id="loginPw" placeholder="Enter password" autofocus>
+      <button type="submit">Enter</button>
+    </form>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var H="74c88e1b693190d053f02c755b8e97d2efbfa5e11d5ed0d485a5581286ba7f3e";
+  function sha256(s){
+    var enc=new TextEncoder().encode(s);
+    return crypto.subtle.digest("SHA-256",enc).then(function(buf){
+      return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0")}).join("");
+    });
+  }
+  if(sessionStorage.getItem("ig99auth")==="1"){unlock()}
+  window.checkLogin=function(e){
+    e.preventDefault();
+    var pw=document.getElementById("loginPw").value;
+    sha256(pw).then(function(h){
+      if(h===H){sessionStorage.setItem("ig99auth","1");unlock()}
+      else{document.getElementById("loginErr").textContent="Incorrect password";}
+    });
+    return false;
+  };
+  function unlock(){
+    document.body.classList.remove("locked");
+    var gate=document.getElementById("loginGate");
+    if(gate)gate.style.display="none";
+  }
+})();
+</script>
+<header><div class="hi">
+  <div class="hl"><h1>IG99 Portfolio</h1><span class="hm" id="headerMeta">loading...</span></div>
+  <div class="hr">
+    <div style="display:flex;align-items:center;gap:8px"><span class="sd" id="statusDot"></span><span class="sl" id="statusLabel">connecting</span></div>
+    <span class="lu" id="lastUpdate"></span>
+    <button class="br" onclick="doRefresh()">&#x21bb; Refresh</button>
+    <button class="br" onclick="saveSnapshot()" title="Save current data so others can view it">&#x1f4be; Save Snapshot</button>
+  </div>
+</div></header>
+<main>
+  <div class="sg">
+    <div class="sc"><div class="sl2">Market Value</div><div class="sv" id="sumValue">Loading...</div><div class="ss" id="sumCost"></div></div>
+    <div class="sc"><div class="sl2">Total P/L</div><div class="sv" id="sumPL">&mdash;</div><div class="ss" id="sumPLpct"></div></div>
+    <div class="sc"><div class="sl2">Day P/L</div><div class="sv" id="sumDayPL">&mdash;</div><div class="ss" id="sumDayPct"></div></div>
+    <div class="sc"><div class="sl2">Positions</div><div class="sv" id="sumPositions">&mdash;</div><div class="ss" id="sumTopHolding"></div></div>
+  </div>
+  <div class="ib" id="infoBanner" style="display:none"></div>
+  <div class="eb" id="errorBanner" style="display:none"></div>
+  <div class="sb" id="snapshotBanner" style="display:none"></div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('summary')">Summary</button>
+    <button class="tab-btn" onclick="switchTab('portfolio')">Portfolio Analyst</button>
+    <button class="tab-btn" onclick="switchTab('market')">Market Analyst</button>
+  </div>
+
+  <!-- ===== VIEW 1: SUMMARY ===== -->
+  <section id="view-summary" class="view-section active">
+    <!-- Portfolio Value Over Time -->
+    <section style="background:#fff;border:1px solid #1c1917;padding:24px">
+      <div class="ch"><span class="cl" style="font-family:'Fraunces',Georgia,serif;font-size:1.1rem">Portfolio Value Over Time</span></div>
+      <div class="chart-box" style="height:360px;position:relative"><canvas id="portfolioValueChart"></canvas><div id="pvPlaceholder" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center"><div style="font-size:13px;color:#78716c">Portfolio value history will appear here after a few refreshes.</div><div style="font-size:11px;color:#a8a29e">Each dashboard refresh saves today's total value.</div></div></div>
+      <div class="cn" id="pvChartNote" style="margin-top:8px;font-size:11px;color:#78716c;text-align:center">Value saved on each dashboard refresh. History builds over time.</div>
+    </section>
+  </section>
+
+  <!-- ===== VIEW 2: PORTFOLIO ANALYST ===== -->
+  <section id="view-portfolio" class="view-section">
+    <div class="cg">
+      <section>
+        <div class="sh"><h2 class="st">Holdings</h2><span class="sm2">Sorted by value</span></div>
+        <div class="tw"><table>
+          <thead><tr><th style="text-align:left;padding-left:12px">Position</th><th>Price</th><th>Day</th><th>Avg Cost</th><th>Value (&euro;)</th><th style="padding-right:12px">Return</th></tr></thead>
+          <tbody id="holdingsBody"><tr><td colspan="6" class="lt" style="text-align:center;padding:24px">Loading portfolio data...</td></tr></tbody>
+        </table></div>
+      </section>
+      <section>
+        <div class="dh"><div><div class="dn" id="detName">Select a position</div><div class="dt" id="detTicker"></div></div><div style="text-align:right"><div class="dp" id="detPrice"></div><div class="dc" id="detChange"></div></div></div>
+        <div class="ic"><div class="ig">
+          <div><div class="il">Your P/L</div><div class="iv" id="detPL">&mdash;</div><div class="is" id="detPLeur"></div></div>
+          <div class="id"><div class="il">Avg Cost</div><div class="iv" id="detAvgCost">&mdash;</div><div class="is" id="detShares"></div></div>
+          <div><div class="il">Value</div><div class="iv" id="detValue">&mdash;</div><div class="is" id="detWeight"></div></div>
+        </div></div>
+        <div class="ic"><div class="ch"><span class="cl">Price History</span><div class="rb" id="rangeBtns"></div></div><div class="chart-box"><canvas id="priceChart"></canvas></div><div class="cn" id="chartNote"></div></div>
+        <div class="sg2" id="statsGrid" style="display:none">
+          <div class="s2c"><div class="s2l">52W Low</div><div class="s2v" id="st52low">&mdash;</div></div>
+          <div class="s2c"><div class="s2l">52W High</div><div class="s2v" id="st52high">&mdash;</div></div>
+          <div class="s2c"><div class="s2l">Mkt Cap</div><div class="s2v" id="stMktCap">&mdash;</div></div>
+          <div class="s2c"><div class="s2l">P/E</div><div class="s2v" id="stPE">&mdash;</div></div>
+        </div>
+        <div class="ic" id="aboutCard" style="display:none"><div class="cl" style="margin-bottom:8px">About</div><div class="at" id="aboutText"></div><div class="am" id="aboutMeta"></div></div>
+        <div class="ic" id="newsCard" style="display:none"><div class="cl" style="margin-bottom:12px">Recent News</div><div id="newsList"></div></div>
+      </section>
+    </div>
+    <div class="exposure-row">
+      <div class="expo-card">
+        <div class="expo-title">Geographic Exposure</div>
+        <div class="expo-sub">By portfolio value</div>
+        <div class="expo-body">
+          <div class="expo-chart-wrap"><canvas id="geoChart"></canvas></div>
+          <div class="expo-legend" id="geoLegend"></div>
+        </div>
+      </div>
+      <div class="expo-card">
+        <div class="expo-title">Sector Exposure</div>
+        <div class="expo-sub">By portfolio value</div>
+        <div class="sector-bar-wrap" id="sectorBars"></div>
+      </div>
+    </div>
+    <div class="exposure-row-3">
+      <div class="expo-card">
+        <div class="expo-title">Asset Allocation</div>
+        <div class="expo-sub">Equities &middot; ETFs &middot; Crypto &middot; Bonds &middot; Commodities</div>
+        <div class="asset-alloc-body">
+          <div class="asset-alloc-chart"><canvas id="assetAllocChart"></canvas><div class="asset-alloc-total"><div class="asset-alloc-total-val" id="allocTotalVal"></div><div class="asset-alloc-total-lbl">Total</div></div></div>
+          <div class="asset-alloc-legend" id="assetAllocLegend"></div>
+        </div>
+      </div>
+      <div class="expo-card">
+        <div class="expo-title">Holdings by Weight</div>
+        <div class="expo-sub">Individual positions sorted by value</div>
+        <div id="weightBars" style="max-height:440px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="jpm-section">
+      <div class="jpm-header">
+        <div class="jpm-header-left"><div class="jpm-icon">JP</div><h2>Market Valuation Context</h2></div>
+        <span class="jpm-header-tag">JPM Guide to the Markets &middot; Data as of 15 May 2026</span>
+      </div>
+      <div class="jpm-body">
+        <div class="jpm-source">Source: J.P. Morgan Asset Management &mdash; Guide to the Markets (EMEA), 15 May 2026. Forward P/E ratios use IBES 12-month forward earnings. Long-term return assumptions are JPM's 10-15 year Capital Market Assumptions in EUR. This is <b>reference context only</b>, not a recommendation.</div>
+        <div class="jpm-grid">
+          <div class="jpm-card">
+            <div class="jpm-card-title"><span class="jpm-card-icon">&#128200;</span> Regional Forward P/E Ratios</div>
+            <div id="jpmValuations"></div>
+          </div>
+          <div class="jpm-card">
+            <div class="jpm-card-title"><span class="jpm-card-icon">&#127919;</span> JPM 10-15yr Expected Returns (EUR)</div>
+            <div id="jpmReturns"></div>
+          </div>
+          <div class="jpm-card">
+            <div class="jpm-card-title"><span class="jpm-card-icon">&#127758;</span> Your Portfolio vs. JPM Valuations</div>
+            <div id="jpmPortOverlay"></div>
+          </div>
+          <div class="jpm-card">
+            <div class="jpm-card-title"><span class="jpm-card-icon">&#128218;</span> US Market Deep Dive</div>
+            <div id="jpmUSDetail"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ai-section">
+      <div class="ai-header">
+        <div class="ai-header-left"><div class="ai-icon">&#9670;</div><h2>IG99 Portfolio Analyst</h2></div>
+        <span class="ai-header-tag">Automated analysis &middot; Not financial advice</span>
+      </div>
+      <div class="ai-body">
+        <div class="ai-disclaimer">This analysis is generated algorithmically based on portfolio composition, benchmark comparisons, and basic financial metrics. It is for <b>educational and discussion purposes only</b> &mdash; not a recommendation to buy, sell, or hold any security. Always do your own research and consult a qualified financial advisor before making investment decisions.</div>
+        <div class="ai-score-row" id="aiScores"></div>
+        <div class="ai-grid">
+          <div class="ai-card"><div class="ai-card-title"><span class="ai-card-icon">&#127760;</span> Geographic &amp; Sector Exposure</div><div id="aiExposure"></div></div>
+          <div class="ai-card"><div class="ai-card-title"><span class="ai-card-icon">&#9888;</span> Concentration &amp; Risk</div><div id="aiRisk"></div></div>
+          <div class="ai-card"><div class="ai-card-title"><span class="ai-card-icon">&#128161;</span> Strategic Observations</div><div id="aiStrategy"></div></div>
+          <div class="ai-card"><div class="ai-card-title"><span class="ai-card-icon">&#128269;</span> Gaps &amp; Opportunities</div><div id="aiGaps"></div></div>
+        </div>
+        <div class="ai-card ai-positions"><div class="ai-card-title"><span class="ai-card-icon">&#128202;</span> Position-Level Review</div>
+          <table class="ai-pos-table"><thead><tr><th>Position</th><th>Signal</th><th>Weight</th><th>Return</th><th style="text-align:left;padding-left:12px">Rationale</th></tr></thead>
+          <tbody id="aiPositions"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== VIEW 3: MARKET ANALYST ===== -->
+  <section id="view-market" class="view-section">
+    <!-- Market Dashboard Cards -->
+    <div class="mkt-cards" id="mktCards">
+      <div class="mkt-card"><div class="mkt-card-label">S&amp;P 500</div><div class="mkt-card-val" id="mktSP500">--</div><div class="mkt-card-sub" id="mktSP500chg"></div></div>
+      <div class="mkt-card"><div class="mkt-card-label">STOXX 600</div><div class="mkt-card-val" id="mktSTOXX">--</div><div class="mkt-card-sub" id="mktSTOXXchg"></div></div>
+      <div class="mkt-card"><div class="mkt-card-label">Nasdaq</div><div class="mkt-card-val" id="mktNASDAQ">--</div><div class="mkt-card-sub" id="mktNASDAQchg"></div></div>
+      <div class="mkt-card"><div class="mkt-card-label">MSCI EM (EEM)</div><div class="mkt-card-val" id="mktEM">--</div><div class="mkt-card-sub" id="mktEMchg"></div></div>
+    </div>
+
+    <!-- Global Indices Table -->
+    <div class="mkt-section-title">Global Indices</div>
+    <div class="mkt-section-sub">Major equity benchmarks</div>
+    <div class="mkt-table-wrap"><table>
+      <thead><tr><th style="text-align:left;padding-left:12px">Index</th><th>Price</th><th>Day %</th><th>5D %</th><th style="padding-right:12px">YTD %</th></tr></thead>
+      <tbody id="mktIndicesBody"><tr><td colspan="5" class="lt" style="text-align:center;padding:24px">Loading market data...</td></tr></tbody>
+    </table></div>
+
+    <!-- Currencies & Commodities -->
+    <div class="mkt-grid-2">
+      <div>
+        <div class="mkt-section-title">Currencies &amp; Rates</div>
+        <div class="mkt-section-sub">Major pairs &amp; treasury yield</div>
+        <div class="mkt-table-wrap"><table>
+          <thead><tr><th style="text-align:left;padding-left:12px">Pair</th><th>Rate</th><th style="padding-right:12px">Day %</th></tr></thead>
+          <tbody id="mktCurrBody"><tr><td colspan="3" class="lt" style="text-align:center;padding:16px">Loading...</td></tr></tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="mkt-section-title">Commodities</div>
+        <div class="mkt-section-sub">Gold, oil &amp; key commodities</div>
+        <div class="mkt-table-wrap"><table>
+          <thead><tr><th style="text-align:left;padding-left:12px">Commodity</th><th>Price</th><th style="padding-right:12px">Day %</th></tr></thead>
+          <tbody id="mktCommodBody"><tr><td colspan="3" class="lt" style="text-align:center;padding:16px">Loading...</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- Market Headlines -->
+    <div class="mkt-panel">
+      <div class="mkt-section-title" style="margin-bottom:12px">Market Headlines</div>
+      <div id="mktHeadlines"><div class="lt" style="text-align:center;padding:16px">Loading headlines...</div></div>
+    </div>
+
+    <!-- Central Banks & Rates -->
+    <div class="mkt-section-title">Central Banks &amp; Policy Rates</div>
+    <div class="mkt-section-sub">Current rates &amp; JPM market expectations</div>
+    <div class="mkt-rates-grid" id="mktCentralBanks"></div>
+
+    <!-- JPM Valuation Context (shared) -->
+    <div style="margin-top:32px">
+      <div class="mkt-grid-2">
+        <div class="expo-card">
+          <div class="expo-title">Regional Forward P/E Ratios</div>
+          <div class="expo-sub">JPM Guide to the Markets</div>
+          <div id="mktJpmValuations"></div>
+        </div>
+        <div class="expo-card">
+          <div class="expo-title">JPM 10-15yr Expected Returns (EUR)</div>
+          <div class="expo-sub">Long-Term Capital Market Assumptions</div>
+          <div id="mktJpmReturns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- What This Means for Our Portfolio -->
+    <div class="mkt-insight-card">
+      <div class="mkt-section-title" style="margin-bottom:4px">What This Means for Our Portfolio</div>
+      <div class="mkt-section-sub">Algorithmic cross-reference of market data with IG99 holdings</div>
+      <div id="mktPortfolioInsights"><div class="lt" style="text-align:center;padding:16px">Waiting for market data...</div></div>
+    </div>
+  </section>
+
+  <footer><span>Data: Yahoo Finance &middot; FX converted to EUR &middot; Refresh every 60s</span><span>Quotes may be 15min delayed</span></footer>
+</main>
+<script src="snapshot.js"></script>
+<script src="dashboard.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
