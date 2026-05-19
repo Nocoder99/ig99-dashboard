@@ -107,7 +107,7 @@ function renderPortfolioValueChart(){
   if(pvChartInst)pvChartInst.destroy();
 
   // Merge Bolero quarterly history with daily snapshots
-  var labels=[],values=[],invested=[];
+  var labels=[],values=[],invested=[],msci=[];
   var hasBolero=typeof BOLERO!=="undefined"&&BOLERO.quarterlyValues&&BOLERO.quarterlyValues.length>0;
 
   if(hasBolero){
@@ -116,6 +116,7 @@ function renderPortfolioValueChart(){
       labels.push(d.toLocaleDateString("en-US",{month:"short",year:"2-digit"}));
       values.push(q.value);
       invested.push(q.invested);
+      msci.push(q.msci||0);
     });
   }
 
@@ -128,6 +129,7 @@ function renderPortfolioValueChart(){
       labels.push(new Date(h.d).toLocaleDateString("en-US",{month:"short",day:"numeric"}));
       values.push(h.v);
       invested.push(lastInvested);
+      msci.push(msci.length>0?msci[msci.length-1]:0);
     }
   });
 
@@ -162,6 +164,14 @@ function renderPortfolioValueChart(){
       pointRadius:0,pointHitRadius:0,fill:false,tension:.3
     });
   }
+  if(msci.length>0&&msci[0]>0){
+    ds.push({
+      label:"MSCI World (same contributions)",
+      data:msci,
+      borderColor:"#6366f1",borderDash:[2,3],borderWidth:1.5,
+      pointRadius:0,pointHitRadius:0,fill:false,tension:.3
+    });
+  }
 
   pvChartInst=new Chart(ctx,{
     type:"line",
@@ -178,17 +188,24 @@ function renderPortfolioValueChart(){
           bodyFont:{family:"JetBrains Mono",size:11},
           callbacks:{
             label:function(c){
-              var prefix=c.datasetIndex===0?"Value: ":"Invested: ";
-              return prefix+"\u20ac"+c.parsed.y.toLocaleString();
+              var labels=["Value: ","Invested: ","MSCI World: "];
+              return (labels[c.datasetIndex]||"")+"\u20ac"+c.parsed.y.toLocaleString();
             },
             afterBody:function(items){
+              var lines=[];
               if(items.length>=2){
                 var val=items[0].parsed.y,inv=items[1].parsed.y;
                 var gain=val-inv;
                 var pct=inv>0?((gain/inv)*100).toFixed(1):"0";
-                return (gain>=0?"+":"")+"\u20ac"+Math.abs(gain).toLocaleString()+" ("+pct+"%) "+(gain>=0?"gain":"loss");
+                lines.push("IG99: "+(gain>=0?"+":"")+"\u20ac"+Math.abs(gain).toLocaleString()+" ("+pct+"%)");
               }
-              return "";
+              if(items.length>=3){
+                var msciVal=items[2].parsed.y,inv2=items[1].parsed.y;
+                var msciGain=msciVal-inv2;
+                var msciPct=inv2>0?((msciGain/inv2)*100).toFixed(1):"0";
+                lines.push("MSCI: "+(msciGain>=0?"+":"")+"\u20ac"+Math.abs(msciGain).toLocaleString()+" ("+msciPct+"%)");
+              }
+              return lines.join("\n");
             }
           }
         }
