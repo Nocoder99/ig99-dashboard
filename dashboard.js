@@ -209,16 +209,22 @@ function enrichQuotes(tickers){
       return fhFetchMetric(tk).then(function(data){
         if(!data||!quotes[tk])return;
         var q=quotes[tk];
-        if(data.fiftyTwoWeekHigh&&!q.fiftyTwoWeekHigh)q.fiftyTwoWeekHigh=data.fiftyTwoWeekHigh;
-        if(data.fiftyTwoWeekLow&&!q.fiftyTwoWeekLow)q.fiftyTwoWeekLow=data.fiftyTwoWeekLow;
+        var p=q.regularMarketPrice||0;
+        // Sanity check: reject 52W data if wildly off from current price (e.g. BRK-A data for BRK-B)
+        var h52ok=data.fiftyTwoWeekHigh&&(!p||data.fiftyTwoWeekHigh<p*3);
+        var l52ok=data.fiftyTwoWeekLow&&(!p||data.fiftyTwoWeekLow>p*0.01);
+        if(h52ok&&!q.fiftyTwoWeekHigh)q.fiftyTwoWeekHigh=data.fiftyTwoWeekHigh;
+        if(l52ok&&!q.fiftyTwoWeekLow)q.fiftyTwoWeekLow=data.fiftyTwoWeekLow;
         if(data.marketCap&&!q.marketCap)q.marketCap=data.marketCap;
         if(data.trailingPE&&!q.trailingPE)q.trailingPE=data.trailingPE;
         if(data.peAvg5Y&&!q.peAvg5Y)q.peAvg5Y=data.peAvg5Y;
         if(data.forwardPE&&!q.forwardPE)q.forwardPE=data.forwardPE;
-        if(data.forwardEps&&!q.forwardEps)q.forwardEps=data.forwardEps;
+        // Sanity check forwardEps: implied PE should be reasonable (0.5x-500x)
+        var epsOk=data.forwardEps&&data.forwardEps>0&&(!p||((p/data.forwardEps)>0.5&&(p/data.forwardEps)<500));
+        if(epsOk&&!q.forwardEps)q.forwardEps=data.forwardEps;
         // Derive forwardEps from price/forwardPE if we have forwardPE but no forwardEps
-        if(q.forwardPE&&q.forwardPE>0&&!q.forwardEps&&q.regularMarketPrice){
-          q.forwardEps=q.regularMarketPrice/q.forwardPE;
+        if(q.forwardPE&&q.forwardPE>0&&!q.forwardEps&&p){
+          q.forwardEps=p/q.forwardPE;
         }
       });
     });
@@ -231,7 +237,11 @@ function enrichQuotes(tickers){
     // Phase 2: Yahoo quoteSummary for anything still missing mcap/PE/forwardPE
     var still=need.filter(function(tk){
       var q=quotes[tk];
-      return q&&(!q.marketCap||!q.trailingPE||!q.forwardPE);
+      if(!q)return false;
+      // Also include tickers with suspicious 52W data (e.g. BRK-A data for BRK-B)
+      var p=q.regularMarketPrice||0;
+      var bad52w=p&&q.fiftyTwoWeekHigh&&q.fiftyTwoWeekHigh>p*3;
+      return !q.marketCap||!q.trailingPE||!q.forwardPE||bad52w;
     });
     if(!still.length)return;
     return fetchSeq(still,function(tk){
@@ -245,9 +255,10 @@ function enrichQuotes(tickers){
         var detail=res.summaryDetail||{};
         if(!q.marketCap&&price.marketCap&&price.marketCap.raw)q.marketCap=price.marketCap.raw;
         if(!q.trailingPE&&detail.trailingPE&&detail.trailingPE.raw)q.trailingPE=detail.trailingPE.raw;
-        if(!q.fiftyTwoWeekHigh&&detail.fiftyTwoWeekHigh&&detail.fiftyTwoWeekHigh.raw)q.fiftyTwoWeekHigh=detail.fiftyTwoWeekHigh.raw;
-        if(!q.fiftyTwoWeekLow&&detail.fiftyTwoWeekLow&&detail.fiftyTwoWeekLow.raw)q.fiftyTwoWeekLow=detail.fiftyTwoWeekLow.raw;
-        // Forward P/E and Forward EPS
+        // Yahoo 52W is more reliable — always overwrite (fixes BRK-A/B confusion from Finnhub)
+        if(detail.fiftyTwoWeekHigh&&detail.fiftyTwoWeekHigh.raw)q.fiftyTwoWeekHigh=detail.fiftyTwoWeekHigh.raw;
+        if(detail.fiftyTwoWeekLow&&detail.fiftyTwoWeekLow.raw)q.fiftyTwoWeekLow=detail.fiftyTwoWeekLow.raw;
+        // Forward P/E and Forward EPS — Yahoo is authoritative, always overwrite
         if(stats.forwardPE&&stats.forwardPE.raw)q.forwardPE=stats.forwardPE.raw;
         else if(detail.forwardPE&&detail.forwardPE.raw)q.forwardPE=detail.forwardPE.raw;
         if(stats.forwardEps&&stats.forwardEps.raw)q.forwardEps=stats.forwardEps.raw;
@@ -729,35 +740,63 @@ function fetchPN(sym){
   var companyName="";
   for(var i=0;i<PORTFOLIO.length;i++){if(PORTFOLIO[i].ticker===sym){companyName=PORTFOLIO[i].name;break}}
 
+  // Build keywords for relevance check (company name words + ticker)
+  var keywords=[];
+  if(companyName){
+    companyName.split(" ").forEach(function(w){
+      w=w.toLowerCase();
+      if(w.length>=3)keywords.push(w);
+    });
+  }
+  var plainTk=sym.replace(/[-.].*$/,"").toLowerCase(); // "BRK-B" -> "brk", "ASML.AS" -> "asml"
+  if(plainTk.length>=2)keywords.push(plainTk);
+
+  function isRelevant(articles){
+    if(!articles||!articles.length)return false;
+    var hits=0;
+    articles.forEach(function(a){
+      var t=(a.title||"").toLowerCase();
+      for(var i=0;i<keywords.length;i++){if(t.indexOf(keywords[i])>=0){hits++;break}}
+    });
+    return hits>=Math.min(2,articles.length); // at least 2 articles (or all if <2) must match
+  }
+
+  // Yahoo news search via CF proxy (reliable) with CORS proxy fallback
+  function yahooNewsSearch(query){
+    return fetch(CF_PROXY+"/v1/finance/search?q="+encodeURIComponent(query)+"&newsCount=8&quotesCount=0")
+      .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+      .then(function(j){return(j&&j.news)||[]})
+      .catch(function(){
+        // Fallback to CORS proxy
+        return pf(YFH[yh]+"/v1/finance/search?q="+encodeURIComponent(query)+"&newsCount=8&quotesCount=0",true)
+          .then(function(j){return(j&&j.news)||[]})
+          .catch(function(){return[]});
+      });
+  }
+
   // Step 1: Try Finnhub company news (works well for US tickers)
   fhFetchCompanyNews(sym).then(function(articles){
-    if(articles&&articles.length>0){
+    if(articles&&articles.length>0&&isRelevant(articles)){
       rNews(articles);return;
     }
-    // Step 2: For non-US stocks, search Finnhub market news by company name
-    if(companyName){
-      return fhFetchMarketNews().then(function(allNews){
-        var kw=companyName.toLowerCase().split(" ")[0]; // first word of company name
-        var filtered=allNews.filter(function(n){return(n.title||"").toLowerCase().indexOf(kw)>=0});
-        if(filtered.length>0){rNews(filtered);return}
-        // Step 3: Yahoo search by company name (richer for non-US)
-        return pf(YFH[yh]+"/v1/finance/search?q="+encodeURIComponent(companyName)+"&newsCount=8&quotesCount=0",true).then(function(j){
-          rNews((j&&j.news)||[]);
-        }).catch(function(){rNews([])});
-      }).catch(function(){
-        return pf(YFH[yh]+"/v1/finance/search?q="+encodeURIComponent(companyName)+"&newsCount=8&quotesCount=0",true).then(function(j){
-          rNews((j&&j.news)||[]);
-        }).catch(function(){rNews([])});
-      });
-    }
-    // No company name found, try Yahoo with ticker
-    return pf(YFH[yh]+"/v1/finance/search?q="+sym+"&newsCount=8&quotesCount=0",true).then(function(j){
-      rNews((j&&j.news)||[]);
-    }).catch(function(){rNews([])});
-  }).catch(function(){
-    // Finnhub failed entirely — go to Yahoo with company name or ticker
+    // Step 2: Yahoo search by company name (most reliable via CF proxy)
     var q=companyName||sym;
-    pf(YFH[yh]+"/v1/finance/search?q="+encodeURIComponent(q)+"&newsCount=8&quotesCount=0",true).then(function(j){rNews((j&&j.news)||[])}).catch(function(){rNews([])});
+    return yahooNewsSearch(q).then(function(news){
+      if(news&&news.length>0){rNews(news);return}
+      // Step 3: Finnhub general news filtered by keyword
+      if(companyName){
+        return fhFetchMarketNews().then(function(allNews){
+          var kw=companyName.toLowerCase().split(" ")[0];
+          var filtered=allNews.filter(function(n){return(n.title||"").toLowerCase().indexOf(kw)>=0});
+          rNews(filtered.length>0?filtered:[]);
+        }).catch(function(){rNews([])});
+      }
+      rNews([]);
+    });
+  }).catch(function(){
+    // Finnhub failed entirely — try Yahoo via CF proxy
+    var q=companyName||sym;
+    yahooNewsSearch(q).then(function(news){rNews(news)});
   });
 }
 
