@@ -547,7 +547,10 @@ function fetchQuotes(){
 
     // Merge: Yahoo data preferred (has currency, marketCap, 52wk, etc.)
     // Finnhub fills gaps where Yahoo missed
+    // Preserve enrichment fields (forwardPE, forwardEps, peAvg5Y, trailingEps) across refreshes
+    var enrichFields=["forwardPE","forwardEps","peAvg5Y","trailingEps","trailingPE"];
     tickers.forEach(function(tk){
+      var old=quotes[tk]||{};
       if(yhData[tk]){
         quotes[tk]=yhData[tk];
       } else if(fhData[tk]){
@@ -558,6 +561,10 @@ function fetchQuotes(){
         if(pos)fq.currency=pos.ccy==="GBX"?"GBp":pos.ccy;
         fq.isGBX=(pos&&pos.ccy==="GBX");
         quotes[tk]=fq;
+      }
+      // Carry over enrichment data from previous cycle if not in new data
+      if(quotes[tk]){
+        enrichFields.forEach(function(f){if(old[f]&&!quotes[tk][f])quotes[tk][f]=old[f]});
       }
     });
 
@@ -693,6 +700,7 @@ function parseYahooChart(j,range){
 }
 
 function fetchChart(sym,range){
+  if(!sym){rChart([],sym);return Promise.resolve();}
   if(chartAbort){try{chartAbort.abort()}catch(e){}}
   chartAbort=new AbortController();
 
