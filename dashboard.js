@@ -167,12 +167,24 @@ function fhFetchMetric(sym){
         if(cnt>=2)peAvg5Y=sum/cnt;
       }
     }
+    // Try to get forward P/E from Finnhub metrics
+    var fwdPE=m["peForwardAnnual"]||m["forwardPE"]||null;
+    // Try to derive forward EPS: if we have current price and forward PE
+    var fwdEps=null;
+    if(fwdPE&&fwdPE>0&&m["52WeekHigh"]){
+      // We'll compute forwardEps later from price/fwdPE when we have the live price
+    }
+    // Also check epsForward or epsEstimateNextYear
+    var epsEst=m["epsForwardAnnual"]||m["epsEstimateNextYear"]||m["epsNormalizedAnnual"]||null;
+
     return{
       fiftyTwoWeekHigh:m["52WeekHigh"]||null,
       fiftyTwoWeekLow:m["52WeekLow"]||null,
       marketCap:m["marketCapitalization"]?m["marketCapitalization"]*1e6:null, // Finnhub returns in millions
       trailingPE:m["peBasicExclExtraTTM"]||m["peTTM"]||null,
-      peAvg5Y:peAvg5Y
+      peAvg5Y:peAvg5Y,
+      forwardPE:fwdPE,
+      forwardEps:epsEst
     };
   }).catch(function(){return null});
 }
@@ -201,6 +213,12 @@ function enrichQuotes(tickers){
         if(data.marketCap&&!q.marketCap)q.marketCap=data.marketCap;
         if(data.trailingPE&&!q.trailingPE)q.trailingPE=data.trailingPE;
         if(data.peAvg5Y&&!q.peAvg5Y)q.peAvg5Y=data.peAvg5Y;
+        if(data.forwardPE&&!q.forwardPE)q.forwardPE=data.forwardPE;
+        if(data.forwardEps&&!q.forwardEps)q.forwardEps=data.forwardEps;
+        // Derive forwardEps from price/forwardPE if we have forwardPE but no forwardEps
+        if(q.forwardPE&&q.forwardPE>0&&!q.forwardEps&&q.regularMarketPrice){
+          q.forwardEps=q.regularMarketPrice/q.forwardPE;
+        }
       });
     });
     return Promise.all(batchP).then(function(){
