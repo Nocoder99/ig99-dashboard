@@ -1241,6 +1241,7 @@ function doRefresh(){
       }).then(function(){
         saveCache();
         renderAll();
+        if(currentTab==="portfolio"){fetchChart(selTk,curRange);}
       });
     }
     // Fetch 5d%/YTD% for market indices via Yahoo (no Finnhub rate limit concern)
