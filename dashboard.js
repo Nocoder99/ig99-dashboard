@@ -238,10 +238,10 @@ function enrichQuotes(tickers){
     var still=need.filter(function(tk){
       var q=quotes[tk];
       if(!q)return false;
-      // Also include tickers with suspicious 52W data (e.g. BRK-A data for BRK-B)
+      // Also include tickers with missing or suspicious 52W data
       var p=q.regularMarketPrice||0;
       var bad52w=p&&q.fiftyTwoWeekHigh&&q.fiftyTwoWeekHigh>p*3;
-      return !q.marketCap||!q.trailingPE||!q.forwardPE||bad52w;
+      return !q.marketCap||!q.trailingPE||!q.forwardPE||!q.fiftyTwoWeekHigh||bad52w;
     });
     if(!still.length)return;
     return fetchSeq(still,function(tk){
@@ -336,7 +336,14 @@ function loadCache(){
       var cq=JSON.parse(localStorage.getItem("ig99_quotes")||"{}");
       var cf=JSON.parse(localStorage.getItem("ig99_fx")||"{}");
       var loaded=false;
-      for(var k in cq){if(!quotes[k]){quotes[k]=cq[k];loaded=true}}
+      for(var k in cq){
+        if(!quotes[k]){
+          // Sanity check cached 52W: strip values wildly off from price (e.g. BRK-A data for BRK-B)
+          var cQuote=cq[k],cp=cQuote.regularMarketPrice||0;
+          if(cp&&cQuote.fiftyTwoWeekHigh&&cQuote.fiftyTwoWeekHigh>cp*3){cQuote.fiftyTwoWeekHigh=null;cQuote.fiftyTwoWeekLow=null}
+          quotes[k]=cQuote;loaded=true;
+        }
+      }
       for(var k in cf){if(!fxLive[k]){fxLive[k]=cf[k];fx[k]=cf[k]}}
       if(loaded)return;
     }
@@ -523,7 +530,17 @@ function fetchQuotes(){
     var map={};
     r.forEach(function(q){var isGBX=(q.currency==="GBp"||q.currency==="GBX");q.isGBX=isGBX;map[q.symbol]=q});
     return map;
-  }).catch(function(){return{}});
+  }).catch(function(){
+    // CORS proxies failed — try CF proxy for Yahoo v7
+    return fetch(CF_PROXY+"/v7/finance/quote?symbols="+encodeURIComponent(all)).then(function(r){
+      if(!r.ok)throw new Error(r.status);return r.json()
+    }).then(function(j){
+      var r=(j&&j.quoteResponse&&j.quoteResponse.result)||[];
+      var map={};
+      r.forEach(function(q){var isGBX=(q.currency==="GBp"||q.currency==="GBX");q.isGBX=isGBX;map[q.symbol]=q});
+      return map;
+    }).catch(function(){return{}});
+  });
 
   return Promise.all([fhPromise,yhPromise]).then(function(results){
     var fhData=results[0],yhData=results[1];
