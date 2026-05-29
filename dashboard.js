@@ -56,6 +56,7 @@ var PROXIES=[
   function(u){return "https://proxy.cors.sh/"+u}
 ];
 var wp=0,YFH=["https://query2.finance.yahoo.com","https://query1.finance.yahoo.com"],yh=0;
+var CF_PROXY="https://yahoo-finance-proxy.alex-dc.workers.dev";
 var quotes={},fx={EUR:1},fxLive={},selTk=PORTFOLIO[0].ticker,curRange="1mo",chartInst=null;
 
 // =====================================================
@@ -234,8 +235,8 @@ function enrichQuotes(tickers){
     });
     if(!still.length)return;
     return fetchSeq(still,function(tk){
-      var url=YFH[yh]+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=price,defaultKeyStatistics,summaryDetail,earningsTrend";
-      return pf(url,true).then(function(j){
+      var url=CF_PROXY+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=price,defaultKeyStatistics,summaryDetail,earningsTrend";
+      return fetch(url).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(j){
         var res=j&&j.quoteSummary&&j.quoteSummary.result&&j.quoteSummary.result[0];
         if(!res||!quotes[tk])return;
         var q=quotes[tk];
@@ -250,8 +251,11 @@ function enrichQuotes(tickers){
         if(stats.forwardPE&&stats.forwardPE.raw)q.forwardPE=stats.forwardPE.raw;
         else if(detail.forwardPE&&detail.forwardPE.raw)q.forwardPE=detail.forwardPE.raw;
         if(stats.forwardEps&&stats.forwardEps.raw)q.forwardEps=stats.forwardEps.raw;
-        // 5Y avg P/E: use fiveYearAvgDividendYield as proxy check, but primarily from Finnhub peAvg5Y
         if(stats.trailingEps&&stats.trailingEps.raw)q.trailingEps=stats.trailingEps.raw;
+        // Derive forwardEps from price/forwardPE if missing
+        if(q.forwardPE&&q.forwardPE>0&&!q.forwardEps&&q.regularMarketPrice){
+          q.forwardEps=q.regularMarketPrice/q.forwardPE;
+        }
       }).catch(function(){});
     },150);
   });
@@ -270,8 +274,8 @@ function fetchForwardPE(tickers){
   });
   if(!need.length)return Promise.resolve();
   return fetchSeq(need,function(tk){
-    var url=YFH[yh]+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=defaultKeyStatistics,summaryDetail";
-    return pf(url,true).then(function(j){
+    var url=CF_PROXY+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=defaultKeyStatistics,summaryDetail";
+    return fetch(url).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(j){
       var res=j&&j.quoteSummary&&j.quoteSummary.result&&j.quoteSummary.result[0];
       if(!res||!quotes[tk])return;
       var q=quotes[tk];
@@ -281,6 +285,10 @@ function fetchForwardPE(tickers){
       else if(detail.forwardPE&&detail.forwardPE.raw)q.forwardPE=detail.forwardPE.raw;
       if(stats.forwardEps&&stats.forwardEps.raw)q.forwardEps=stats.forwardEps.raw;
       if(stats.trailingEps&&stats.trailingEps.raw&&!q.trailingEps)q.trailingEps=stats.trailingEps.raw;
+      // Derive forwardEps from price/forwardPE if missing
+      if(q.forwardPE&&q.forwardPE>0&&!q.forwardEps&&q.regularMarketPrice){
+        q.forwardEps=q.regularMarketPrice/q.forwardPE;
+      }
     }).catch(function(){});
   },150);
 }
