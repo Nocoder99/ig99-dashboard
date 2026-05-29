@@ -80,8 +80,8 @@ function renderAll(){
   var tvWithCash=tv+cash;
   var tpl=tvWithCash-tc,tpp=tc?(tpl/tc)*100:0,dpc=tv?(dp/(tv-dp))*100:0;
   var up=tpl>=0,du=dp>=0;
-  document.getElementById("sumValue").textContent="\u20ac"+fn(tvWithCash,0);
-  document.getElementById("sumCost").textContent="Cost basis \u20ac"+fn(tc,0)+(cash>0?" \u00b7 Cash \u20ac"+fn(cash,0):"");
+  document.getElementById("sumValue").textContent="€"+fn(tvWithCash,0);
+  document.getElementById("sumCost").textContent="Cost basis €"+fn(tc,0)+(cash>0?" · Cash €"+fn(cash,0):"");
   var pe=document.getElementById("sumPL");pe.textContent=(up?"+":"")+"€"+fn(tpl,0);pe.className="sv "+(up?"g":"r");
   var pp=document.getElementById("sumPLpct");pp.textContent=fp(tpp);pp.className="ss "+(up?"g":"r");
   var de=document.getElementById("sumDayPL");de.textContent=(du?"+":"")+"€"+fn(dp,0);de.className="sv "+(du?"g":"r");
@@ -292,13 +292,83 @@ function renderDetail(rows,tv){
   document.getElementById("detShares").textContent=r.shares.toLocaleString()+" shares";
   document.getElementById("detValue").textContent=r.suspect?"FX error":"€"+fn(r.valueEUR,0);
   document.getElementById("detWeight").textContent=tv&&r.valueEUR?((r.valueEUR/tv)*100).toFixed(1)+"% of port.":"";
-  document.getElementById("chartNote").textContent="Dashed line = your avg cost ("+s+fn(r.avgCostNative,2)+")";
+  var noteText="Dashed line = your avg cost ("+s+fn(r.avgCostNative,2)+")";
+  var posDetail=null;for(var pi=0;pi<PORTFOLIO.length;pi++){if(PORTFOLIO[pi].ticker===r.ticker){posDetail=PORTFOLIO[pi];break}}
+  if(r.q&&r.q.forwardEps&&r.q.forwardEps>0&&posDetail&&posDetail.assetType==="Equity")noteText+=" · Purple = Forward P/E (right axis)";
+  document.getElementById("chartNote").textContent=noteText;
   if(r.q){
     document.getElementById("statsGrid").style.display="grid";
     document.getElementById("st52low").textContent=r.q.fiftyTwoWeekLow?s+fn(r.q.fiftyTwoWeekLow,2):"—";
     document.getElementById("st52high").textContent=r.q.fiftyTwoWeekHigh?s+fn(r.q.fiftyTwoWeekHigh,2):"—";
     document.getElementById("stMktCap").textContent=r.q.marketCap?s+fb(r.q.marketCap):"—";
     document.getElementById("stPE").textContent=r.q.trailingPE?r.q.trailingPE.toFixed(1):"—";
+  }
+  renderForwardPECard(r);
+}
+
+// --- Forward P/E Valuation Card ---
+function renderForwardPECard(r){
+  var card=document.getElementById("fwdPECard");
+  if(!card)return;
+  // Only show for equities with forward P/E data
+  var pos=null;
+  for(var i=0;i<PORTFOLIO.length;i++){if(PORTFOLIO[i].ticker===r.ticker){pos=PORTFOLIO[i];break}}
+  if(!pos||pos.assetType!=="Equity"||!r.q){card.style.display="none";return}
+
+  var fpe=r.q.forwardPE;
+  var avg5y=r.q.peAvg5Y;
+
+  // If we don't have forwardPE yet, try computing from price/forwardEps
+  if(!fpe&&r.q.forwardEps&&r.q.forwardEps>0&&r.price){
+    fpe=r.price/r.q.forwardEps;
+  }
+
+  if(!fpe||fpe<=0||fpe>500){card.style.display="none";return}
+  card.style.display="block";
+
+  // If no 5Y avg from Finnhub, estimate from trailing P/E (rough proxy)
+  if(!avg5y&&r.q.trailingPE&&r.q.trailingPE>0){
+    avg5y=r.q.trailingPE*0.95; // Approximate: trailing PE slightly discounted
+  }
+
+  var curEl=document.getElementById("fwdPEcurrent");
+  var avgEl=document.getElementById("fwdPEavg");
+  var deltaEl=document.getElementById("fwdPEdelta");
+  var subEl=document.getElementById("fwdPEsub");
+  var deltaSub=document.getElementById("fwdPEdeltaSub");
+  var barEl=document.getElementById("fwdPEbar");
+
+  curEl.textContent=fpe.toFixed(1)+"x";
+  subEl.textContent="12m forward earnings";
+
+  if(avg5y&&avg5y>0){
+    avgEl.textContent=avg5y.toFixed(1)+"x";
+    var delta=((fpe/avg5y-1)*100);
+    var deltaAbs=fpe-avg5y;
+    deltaEl.textContent=(delta>=0?"+":"")+delta.toFixed(0)+"%";
+    deltaSub.textContent=(deltaAbs>=0?"+":"")+deltaAbs.toFixed(1)+"x";
+    deltaEl.className="iv "+(delta>15?"r":delta<-10?"g":"");
+
+    // Visual bar
+    var minPE=Math.max(0,Math.min(fpe,avg5y)*0.5);
+    var maxPE=Math.max(fpe,avg5y)*1.5;
+    var range=maxPE-minPE;
+    var fillPct=Math.min(100,Math.max(5,((fpe-minPE)/range)*100));
+    var avgPct=Math.min(97,Math.max(3,((avg5y-minPE)/range)*100));
+    var barColor=delta>15?"#fca5a5":delta<-10?"#bbf7d0":"#bfdbfe";
+    var verdict="",verdictCls="";
+    if(delta>20){verdict="Trading at a significant premium to historical average";verdictCls="expensive"}
+    else if(delta>10){verdict="Trading above historical average — moderately expensive";verdictCls="expensive"}
+    else if(delta<-15){verdict="Trading well below historical average — potentially undervalued";verdictCls="cheap"}
+    else if(delta<-5){verdict="Trading below historical average — relatively cheap";verdictCls="cheap"}
+    else{verdict="Trading near fair value relative to historical average";verdictCls="fair"}
+
+    barEl.innerHTML='<div class="fpe-bar-track"><div class="fpe-bar-fill" style="width:'+fillPct+'%;background:'+barColor+'"></div><div class="fpe-bar-avg" style="left:'+avgPct+'%" title="5Y Avg: '+avg5y.toFixed(1)+'x"></div></div><div class="fpe-bar-labels"><span>'+minPE.toFixed(0)+'x</span><span>'+maxPE.toFixed(0)+'x</span></div><div class="fpe-verdict '+verdictCls+'">'+verdict+'</div>';
+  } else {
+    avgEl.textContent="—";
+    deltaEl.textContent="—";
+    deltaSub.textContent="";
+    barEl.innerHTML="";
   }
 }
 
@@ -323,11 +393,83 @@ function rChart(data,sym){
   var ac=acEUR!=null?(displayCcy==="EUR"?acEUR:(rate>0?acEUR/rate:acEUR)):null;
   var iu=data[data.length-1].price>=data[0].price;
   var lc=iu?"#047857":"#b91c1c",fc=iu?"rgba(4,120,87,.12)":"rgba(185,28,28,.12)";
-  var ds=[{data:data.map(function(d){return d.price}),borderColor:lc,backgroundColor:fc,fill:true,tension:.3,pointRadius:0,pointHitRadius:8,borderWidth:1.5}];
-  if(ac)ds.push({data:data.map(function(){return ac}),borderColor:"#78716c",borderDash:[4,4],borderWidth:1,pointRadius:0,pointHitRadius:0,fill:false});
+  var ds=[{label:"Price",data:data.map(function(d){return d.price}),borderColor:lc,backgroundColor:fc,fill:true,tension:.3,pointRadius:0,pointHitRadius:8,borderWidth:1.5,yAxisID:"y"}];
+  if(ac)ds.push({label:"Avg Cost",data:data.map(function(){return ac}),borderColor:"#78716c",borderDash:[4,4],borderWidth:1,pointRadius:0,pointHitRadius:0,fill:false,yAxisID:"y"});
+
+  // Forward P/E on secondary axis (only for equities with forwardEps)
+  var hasFwdPE=false;
+  var fwdPEavg=null;
+  if(pos&&pos.assetType==="Equity"&&q){
+    var fwdEps=q.forwardEps;
+    if(fwdEps&&fwdEps>0){
+      var peData=data.map(function(d){return d.price>0?+(d.price/fwdEps).toFixed(1):null});
+      // Check if PE values are reasonable
+      var validPE=peData.filter(function(v){return v!=null&&v>0&&v<200});
+      if(validPE.length>data.length*0.5){
+        hasFwdPE=true;
+        ds.push({
+          label:"Fwd P/E",
+          data:peData,
+          borderColor:"#6366f1",
+          borderWidth:1.5,
+          borderDash:[3,3],
+          pointRadius:0,
+          pointHitRadius:8,
+          fill:false,
+          tension:.3,
+          yAxisID:"y2"
+        });
+        // 5Y avg P/E line
+        fwdPEavg=q.peAvg5Y||null;
+        if(fwdPEavg&&fwdPEavg>0){
+          ds.push({
+            label:"5Y Avg P/E",
+            data:data.map(function(){return fwdPEavg}),
+            borderColor:"#6366f1",
+            borderWidth:1,
+            borderDash:[8,4],
+            pointRadius:0,
+            pointHitRadius:0,
+            fill:false,
+            yAxisID:"y2"
+          });
+        }
+      }
+    }
+  }
+
+  var scales={
+    x:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c",maxTicksLimit:8},grid:{display:false},border:{color:"#d6d3d1"}},
+    y:{position:"left",ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c"},grid:{color:"#f5f5f4"},border:{display:false}}
+  };
+  if(hasFwdPE){
+    scales.y2={
+      position:"right",
+      ticks:{font:{family:"JetBrains Mono",size:9},color:"#6366f1",callback:function(v){return v.toFixed(0)+"x"}},
+      grid:{display:false},
+      border:{display:false},
+      title:{display:true,text:"Fwd P/E",font:{family:"JetBrains Mono",size:9},color:"#6366f1"}
+    };
+  }
+
   chartInst=new Chart(ctx,{
     type:"line",data:{labels:data.map(function(d){return d.label}),datasets:ds},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},plugins:{legend:{display:false},tooltip:{backgroundColor:"#fafaf9",titleColor:"#1c1917",bodyColor:"#1c1917",borderColor:"#1c1917",borderWidth:1,titleFont:{family:"JetBrains Mono",size:11},bodyFont:{family:"JetBrains Mono",size:11},callbacks:{label:function(c){return c.datasetIndex===0?cs(displayCcy)+c.parsed.y.toFixed(2):"Avg cost: "+cs(displayCcy)+c.parsed.y.toFixed(2)}}}},scales:{x:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c",maxTicksLimit:8},grid:{display:false},border:{color:"#d6d3d1"}},y:{ticks:{font:{family:"JetBrains Mono",size:9},color:"#78716c"},grid:{color:"#f5f5f4"},border:{display:false}}}}
+    options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
+      plugins:{
+        legend:{display:hasFwdPE,position:"bottom",labels:{font:{family:"Inter",size:9},boxWidth:12,padding:8,filter:function(item){var l=item.text||"";return l==="Fwd P/E"||l==="5Y Avg P/E"}}},
+        tooltip:{backgroundColor:"#fafaf9",titleColor:"#1c1917",bodyColor:"#1c1917",borderColor:"#1c1917",borderWidth:1,titleFont:{family:"JetBrains Mono",size:11},bodyFont:{family:"JetBrains Mono",size:11},
+          callbacks:{label:function(c){
+            var lbl=c.dataset.label||"";
+            if(lbl==="Price")return cs(displayCcy)+c.parsed.y.toFixed(2);
+            if(lbl==="Avg Cost")return "Avg cost: "+cs(displayCcy)+c.parsed.y.toFixed(2);
+            if(lbl==="Fwd P/E")return "Fwd P/E: "+c.parsed.y.toFixed(1)+"x";
+            if(lbl==="5Y Avg P/E")return "5Y Avg P/E: "+c.parsed.y.toFixed(1)+"x";
+            return c.parsed.y.toFixed(2);
+          }}
+        }
+      },
+      scales:scales
+    }
   });
 }
 
@@ -1094,6 +1236,9 @@ function doRefresh(){
     if(n>0){
       var allTickers=PORTFOLIO.filter(function(p){return!!p.ticker}).map(function(p){return p.ticker});
       enrichQuotes(allTickers).then(function(){
+        // After basic enrichment, fetch Forward P/E for equities
+        return fetchForwardPE(allTickers);
+      }).then(function(){
         saveCache();
         renderAll();
       });

@@ -101,6 +101,15 @@ tr.sel .r{color:#fca5a5}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid #d6d3d1;font-size:9px;text-transform:uppercase;letter-spacing:.2em;color:#78716c;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .lt{font-size:12px;color:#a8a29e;font-style:italic}
 .sb{font-size:12px;color:#92400e;border:1px solid #fbbf24;background:#fefce8;padding:8px 12px;margin-bottom:24px}
+/* --- Forward P/E Bar --- */
+.fpe-bar-track{height:6px;background:#f5f5f4;border-radius:3px;position:relative;margin-top:6px}
+.fpe-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.fpe-bar-avg{position:absolute;top:-3px;width:2px;height:12px;background:#1c1917;border-radius:1px}
+.fpe-bar-labels{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:#a8a29e;margin-top:4px}
+.fpe-verdict{font-size:11px;margin-top:8px;padding:6px 10px;border-radius:2px;font-weight:500}
+.fpe-verdict.cheap{background:#f0fdf4;color:#047857;border:1px solid #bbf7d0}
+.fpe-verdict.fair{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+.fpe-verdict.expensive{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}
 /* --- Club Financials --- */
 .fin-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
 .cf-flow-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f4;font-size:13px}
@@ -444,6 +453,15 @@ footer{padding-top:12px;flex-direction:column;gap:4px}
           <div class="s2c"><div class="s2l">52W High</div><div class="s2v" id="st52high">&mdash;</div></div>
           <div class="s2c"><div class="s2l">Mkt Cap</div><div class="s2v" id="stMktCap">&mdash;</div></div>
           <div class="s2c"><div class="s2l">P/E</div><div class="s2v" id="stPE">&mdash;</div></div>
+        </div>
+        <div class="ic" id="fwdPECard" style="display:none">
+          <div class="cl" style="margin-bottom:10px">Forward P/E Valuation</div>
+          <div class="ig" style="grid-template-columns:repeat(3,1fr)">
+            <div><div class="il">Fwd P/E</div><div class="iv" id="fwdPEcurrent">&mdash;</div><div class="is" id="fwdPEsub"></div></div>
+            <div class="id"><div class="il">5Y Avg P/E</div><div class="iv" id="fwdPEavg">&mdash;</div><div class="is">Historical average</div></div>
+            <div><div class="il">Delta</div><div class="iv" id="fwdPEdelta">&mdash;</div><div class="is" id="fwdPEdeltaSub"></div></div>
+          </div>
+          <div id="fwdPEbar" style="margin-top:12px"></div>
         </div>
         <div class="ic" id="aboutCard" style="display:none"><div class="cl" style="margin-bottom:8px">About</div><div class="at" id="aboutText"></div><div class="am" id="aboutMeta"></div></div>
         <div class="ic" id="newsCard" style="display:none"><div class="cl" style="margin-bottom:12px">Recent News</div><div id="newsList"></div></div>

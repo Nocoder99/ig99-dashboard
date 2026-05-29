@@ -155,11 +155,24 @@ function fhFetchMetric(sym){
   return fhFetch("/stock/metric?symbol="+encodeURIComponent(sym)+"&metric=all").then(function(j){
     if(!j||!j.metric)return null;
     var m=j.metric;
+    // Compute 5Y avg P/E from Finnhub annual series if available
+    var peAvg5Y=null;
+    if(j.series&&j.series.annual){
+      // Look for peBasicExclExtraTTM or peNormalizedAnnual in series
+      var peSeries=j.series.annual.pe||j.series.annual.peBasicExclExtraTTM||j.series.annual.peNormalizedAnnual||[];
+      if(peSeries.length>=3){
+        var recent=peSeries.slice(0,5); // most recent 5 years
+        var sum=0,cnt=0;
+        recent.forEach(function(p){if(p.v&&p.v>0&&p.v<200){sum+=p.v;cnt++}});
+        if(cnt>=2)peAvg5Y=sum/cnt;
+      }
+    }
     return{
       fiftyTwoWeekHigh:m["52WeekHigh"]||null,
       fiftyTwoWeekLow:m["52WeekLow"]||null,
       marketCap:m["marketCapitalization"]?m["marketCapitalization"]*1e6:null, // Finnhub returns in millions
-      trailingPE:m["peBasicExclExtraTTM"]||m["peTTM"]||null
+      trailingPE:m["peBasicExclExtraTTM"]||m["peTTM"]||null,
+      peAvg5Y:peAvg5Y
     };
   }).catch(function(){return null});
 }
@@ -187,6 +200,7 @@ function enrichQuotes(tickers){
         if(data.fiftyTwoWeekLow&&!q.fiftyTwoWeekLow)q.fiftyTwoWeekLow=data.fiftyTwoWeekLow;
         if(data.marketCap&&!q.marketCap)q.marketCap=data.marketCap;
         if(data.trailingPE&&!q.trailingPE)q.trailingPE=data.trailingPE;
+        if(data.peAvg5Y&&!q.peAvg5Y)q.peAvg5Y=data.peAvg5Y;
       });
     });
     return Promise.all(batchP).then(function(){
@@ -195,14 +209,14 @@ function enrichQuotes(tickers){
   }
 
   return nextMetricBatch().then(function(){
-    // Phase 2: Yahoo quoteSummary for anything still missing mcap/PE
+    // Phase 2: Yahoo quoteSummary for anything still missing mcap/PE/forwardPE
     var still=need.filter(function(tk){
       var q=quotes[tk];
-      return q&&(!q.marketCap||!q.trailingPE);
+      return q&&(!q.marketCap||!q.trailingPE||!q.forwardPE);
     });
     if(!still.length)return;
     return fetchSeq(still,function(tk){
-      var url=YFH[yh]+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=price,defaultKeyStatistics,summaryDetail";
+      var url=YFH[yh]+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=price,defaultKeyStatistics,summaryDetail,earningsTrend";
       return pf(url,true).then(function(j){
         var res=j&&j.quoteSummary&&j.quoteSummary.result&&j.quoteSummary.result[0];
         if(!res||!quotes[tk])return;
@@ -214,9 +228,43 @@ function enrichQuotes(tickers){
         if(!q.trailingPE&&detail.trailingPE&&detail.trailingPE.raw)q.trailingPE=detail.trailingPE.raw;
         if(!q.fiftyTwoWeekHigh&&detail.fiftyTwoWeekHigh&&detail.fiftyTwoWeekHigh.raw)q.fiftyTwoWeekHigh=detail.fiftyTwoWeekHigh.raw;
         if(!q.fiftyTwoWeekLow&&detail.fiftyTwoWeekLow&&detail.fiftyTwoWeekLow.raw)q.fiftyTwoWeekLow=detail.fiftyTwoWeekLow.raw;
+        // Forward P/E and Forward EPS
+        if(stats.forwardPE&&stats.forwardPE.raw)q.forwardPE=stats.forwardPE.raw;
+        else if(detail.forwardPE&&detail.forwardPE.raw)q.forwardPE=detail.forwardPE.raw;
+        if(stats.forwardEps&&stats.forwardEps.raw)q.forwardEps=stats.forwardEps.raw;
+        // 5Y avg P/E: use fiveYearAvgDividendYield as proxy check, but primarily from Finnhub peAvg5Y
+        if(stats.trailingEps&&stats.trailingEps.raw)q.trailingEps=stats.trailingEps.raw;
       }).catch(function(){});
     },150);
   });
+}
+
+// Fetch Forward P/E for all equities that don't have it yet
+function fetchForwardPE(tickers){
+  var need=tickers.filter(function(tk){
+    var q=quotes[tk];
+    if(!q)return false;
+    // Only fetch for equities (skip ETFs, commodities, crypto, bonds)
+    var pos=null;
+    for(var i=0;i<PORTFOLIO.length;i++){if(PORTFOLIO[i].ticker===tk){pos=PORTFOLIO[i];break}}
+    if(!pos||pos.assetType!=="Equity")return false;
+    return !q.forwardPE;
+  });
+  if(!need.length)return Promise.resolve();
+  return fetchSeq(need,function(tk){
+    var url=YFH[yh]+"/v10/finance/quoteSummary/"+encodeURIComponent(tk)+"?modules=defaultKeyStatistics,summaryDetail";
+    return pf(url,true).then(function(j){
+      var res=j&&j.quoteSummary&&j.quoteSummary.result&&j.quoteSummary.result[0];
+      if(!res||!quotes[tk])return;
+      var q=quotes[tk];
+      var stats=res.defaultKeyStatistics||{};
+      var detail=res.summaryDetail||{};
+      if(stats.forwardPE&&stats.forwardPE.raw)q.forwardPE=stats.forwardPE.raw;
+      else if(detail.forwardPE&&detail.forwardPE.raw)q.forwardPE=detail.forwardPE.raw;
+      if(stats.forwardEps&&stats.forwardEps.raw)q.forwardEps=stats.forwardEps.raw;
+      if(stats.trailingEps&&stats.trailingEps.raw&&!q.trailingEps)q.trailingEps=stats.trailingEps.raw;
+    }).catch(function(){});
+  },150);
 }
 
 function cs(c){return{USD:"$",EUR:"€",GBP:"£",GBX:"p",DKK:"kr",JPY:"¥",KRW:"₩"}[c]||""}
@@ -276,7 +324,7 @@ function saveSnapshot(){
   var cleanQ={};
   for(var sym in quotes){
     var q=quotes[sym];
-    cleanQ[sym]={symbol:q.symbol,regularMarketPrice:q.regularMarketPrice,regularMarketChange:q.regularMarketChange,regularMarketChangePercent:q.regularMarketChangePercent,previousClose:q.previousClose,fiftyTwoWeekLow:q.fiftyTwoWeekLow,fiftyTwoWeekHigh:q.fiftyTwoWeekHigh,fullExchangeName:q.fullExchangeName,currency:q.currency,marketCap:q.marketCap||null,trailingPE:q.trailingPE||null,isGBX:q.isGBX||false};
+    cleanQ[sym]={symbol:q.symbol,regularMarketPrice:q.regularMarketPrice,regularMarketChange:q.regularMarketChange,regularMarketChangePercent:q.regularMarketChangePercent,previousClose:q.previousClose,fiftyTwoWeekLow:q.fiftyTwoWeekLow,fiftyTwoWeekHigh:q.fiftyTwoWeekHigh,fullExchangeName:q.fullExchangeName,currency:q.currency,marketCap:q.marketCap||null,trailingPE:q.trailingPE||null,isGBX:q.isGBX||false,forwardPE:q.forwardPE||null,forwardEps:q.forwardEps||null,peAvg5Y:q.peAvg5Y||null,trailingEps:q.trailingEps||null};
   }
   var ts=new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
   var content="// IG99 Portfolio Snapshot — auto-generated on "+ts+"\n"+
